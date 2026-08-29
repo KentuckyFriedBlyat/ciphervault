@@ -14,12 +14,11 @@ are shredded in place.
 
 ## 1. What it does
 
-| Mode | Page format | Capacity | Where it lives |
-|---|---|---|---|
-| **HEX (primary)** | Full Unicode in / out — any language, punctuation, emoji, spaces. Message is UTF-8 → hex; each hex character consumes two pad digits through a fixed code map (0-9 → 00-09, A-F → 10-15). Simplified page: number grid + checksum only. | **127 bytes** of any text per page
+**HEX (primary)** — Full Unicode in / out (any language, punctuation, emoji, spaces). Message is UTF-8 → hex; each hex character consumes two pad digits through a fixed code map (0-9 → 00-09, A-F → 10-15). Simplified page: number grid + checksum only. **Capacity: 127 bytes of any text per page.** Stored in `HexPads/`.
 
-**Cipher text format.** Decryption accepts cipher text with or without spaces/separators - non-digit characters are automatically stripped. This makes it easier to work with cipher text that was transmitted in groups (e.g., "85422 44931 94682..."). | `HexPads/` |
-| **Printable (fallback)** | Human-decodable pages with a per-page random substitution table over `a-z0-9`, printable for offline manual use. | **255 A-Z/0-9 chars** per page | `Manual Pads/` |
+Cipher text format: Decryption accepts cipher text with or without spaces/separators - non-digit characters are automatically stripped. This makes it easier to work with cipher text that was transmitted in groups (e.g., "85422 44931 94682...").
+
+**Printable (fallback)** — Human-decodable pages with a per-page random substitution table over `a-z0-9`, printable for offline manual use. **Capacity: 255 A-Z/0-9 chars per page.** Stored in `Manual Pads/`.
 
 **Multi-part long messages.** With "split across multiple pads" enabled, a
 message longer than one page's capacity is split; each part burns its own pad

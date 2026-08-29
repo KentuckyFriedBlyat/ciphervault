@@ -1,6 +1,6 @@
 # CipherVault — One-Time Pad Workspace
 
-**Version 1.3.3-GUI** · Python 3 · Linux
+**Version 1.3.2-GUI** · Python 3 · Linux
 
 A field-deployable one-time-pad workspace for secure communications in
 offline or infrastructure-constrained environments. Pad material is generated

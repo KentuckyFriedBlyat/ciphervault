@@ -196,12 +196,30 @@ def install_python_packages():
     if not missing:
         return True
     print("  [INFO] Installing Python packages: %s" % ", ".join(missing))
+    
+    # Check for PEP 668 externally-managed-environment
+    # If detected, use --break-system-packages flag
+    pip_args = [sys.executable, "-m", "pip", "install", "--user"]
     try:
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "--user"] + missing,
-            check=True
+        result = subprocess.run(
+            pip_args + missing,
+            capture_output=True,
+            text=True
         )
-        return True
+        if result.returncode == 0:
+            return True
+        
+        # Check if it's a PEP 668 error
+        if "externally-managed-environment" in result.stderr:
+            print("  [INFO] Detected externally-managed Python environment (PEP 668)")
+            print("  [INFO] Retrying with --break-system-packages flag...")
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "--user", "--break-system-packages"] + missing,
+                check=True
+            )
+            return True
+        else:
+            raise subprocess.CalledProcessError(result.returncode, pip_args + missing)
     except subprocess.CalledProcessError:
         print("  [WARN] Could not install Python packages automatically.")
         print("         Run: pip3 install --user %s" % " ".join(missing))

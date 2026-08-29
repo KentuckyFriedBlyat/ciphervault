@@ -76,8 +76,52 @@ class VaultApplication:
         self.root.after(250, self.start_selfcheck)   # RAM-only self check at startup
         if not self.sandbox:
             self.root.after(400, self._purge_obsolete_pads)  # SUBTASK 5: obsolete pad sweep
+        
+        # Load operator/station IDs from config if persisted
+        self._load_operator_station_from_config()
 
     # -- interface architecture ---------------------------------------------
+    
+    def _load_operator_station_from_config(self):
+        """Load operator/station IDs from config if they are persisted."""
+        try:
+            import config.config as cfg
+            if cfg.OPERATOR_ID != "<fill in by hand>":
+                self.operator_var.set(cfg.OPERATOR_ID)
+            if cfg.STATION_ID != "<fill in by hand>":
+                self.station_var.set(cfg.STATION_ID)
+        except Exception:
+            pass
+    
+    def _save_operator_station_to_config(self):
+        """Save operator/station IDs to config if the persist checkbox is checked."""
+        if not self.persist_vars.get():
+            return
+        try:
+            import config.config as cfg
+            op = self.operator_var.get().strip()
+            st = self.station_var.get().strip()
+            if op and op != "<fill in by hand>":
+                cfg.OPERATOR_ID = op
+            if st and st != "<fill in by hand>":
+                cfg.STATION_ID = st
+            # Write to config file
+            config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
+            if config_path.exists():
+                content = config_path.read_text()
+                # Replace OPERATOR_ID line
+                content = re.sub(r'OPERATOR_ID = .*$', 'OPERATOR_ID = "%s"' % op, content)
+                # Replace STATION_ID line
+                content = re.sub(r'STATION_ID = .*$', 'STATION_ID = "%s"' % st, content)
+                config_path.write_text(content)
+                self._log("[ OK ] Operator/station IDs persisted to config")
+        except Exception as e:
+            self._log("[WARN] Could not persist operator/station IDs: %s" % e)
+    
+    def _on_close(self):
+        """Handle window close - save operator/station if persist is checked."""
+        self._save_operator_station_to_config()
+        self.root.destroy()
     def build_gui(self):
         r = self.root
         r.title("%s v%s - %s" % (APP_NAME, VERSION, PRODUCT_LINE))
@@ -131,6 +175,18 @@ class VaultApplication:
                                         "JS8Call / VARA transmission",
                              variable=self.fec_var)
         fcb.pack(side="left", padx=(18, 0))
+        
+        # Operator / Station ID section
+        id_opts = tk.Frame(r)
+        id_opts.pack(fill="x", padx=12, pady=(0, 6))
+        tk.Label(id_opts, text="Operator / Station:", font=("Helvetica", 9, "bold")).pack(side="left")
+        self.operator_var = tk.StringVar(value="<fill in by hand>")
+        self.station_var = tk.StringVar(value="<fill in by hand>")
+        tk.Entry(id_opts, textvariable=self.operator_var, width=20).pack(side="left", padx=(0, 8))
+        tk.Entry(id_opts, textvariable=self.station_var, width=20).pack(side="left", padx=(0, 8))
+        self.persist_vars = tk.BooleanVar(value=False)
+        persist_cb = tk.Checkbutton(id_opts, text="Persist in config", variable=self.persist_vars)
+        persist_cb.pack(side="left")
 
         # Character / byte count readout
         self.count_var = tk.StringVar(value="")
@@ -390,6 +446,8 @@ class VaultApplication:
             "How many pads to generate?:", minvalue=1)
         if n is None:
             return
+        # Update operator/station in config before generating
+        self._save_operator_station_to_config()
         self._set_busy(True)
         threading.Thread(target=self._gen_worker, args=(n, kind), daemon=True).start()
 

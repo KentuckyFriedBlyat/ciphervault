@@ -84,6 +84,11 @@ python3 ciphervault.py --version      # show version
 python3 ciphervault.py --operator NAME --station ID  # set operator/station IDs
 ```
 
+**GUI Settings:** The GUI includes an Operator / Station ID section with text
+fields and a "Persist in config" checkbox. When checked and the window is
+closed, the IDs are saved to `config/config.py` and will be used for all
+subsequent pad generations.
+
 Copy `ciphervault.py` **and** the adjacent `modules/` and `config/` folders to
 the machine. The workspace tree is created next to the launcher:
 

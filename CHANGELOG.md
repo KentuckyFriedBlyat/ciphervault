@@ -39,6 +39,9 @@
   been tampered with or corrupted.
 * **Added permission error handling.** Falls back to temp directory if
   audit/ folder can't be created.
+* **Added GUI operator/station ID settings.** Text fields with "Persist in
+  config" checkbox. When checked, IDs are saved to config/config.py for
+  use in all subsequent pad generations.
 
 ### Added
 

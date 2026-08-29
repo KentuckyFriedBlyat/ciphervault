@@ -54,6 +54,38 @@ OPERATOR_ID = os.environ.get("CIPHERVAULT_OPERATOR", "<fill in by hand>")
 STATION_ID = os.environ.get("CIPHERVAULT_STATION", "<fill in by hand>")
 
 # ===========================================================================
+# CERTIFICATE INTEGRITY
+# ===========================================================================
+# SHA-256 hash of loaded certificate for integrity verification.
+# Calculated when certificate is loaded and compared at startup.
+# If hash doesn't match, certificate has been tampered with.
+CERTIFICATE_SHA256 = None  # Populated at runtime when certificate is loaded
+
+# ===========================================================================
+# CERTIFICATE INTEGRITY
+# ===========================================================================
+# SHA-256 hash of loaded certificate for integrity verification.
+# Calculated when certificate is loaded and compared at startup.
+# If hash doesn't match, certificate has been tampered with.
+CERTIFICATE_SHA256 = None  # Populated at runtime when certificate is loaded
+
+# ===========================================================================
+# CERTIFICATE INTEGRITY
+# ===========================================================================
+# SHA-256 hash of loaded certificate for integrity verification.
+# Calculated when certificate is loaded and compared at startup.
+# If hash doesn't match, certificate has been tampered with.
+CERTIFICATE_SHA256 = None  # Populated at runtime when certificate is loaded
+
+# ===========================================================================
+# CERTIFICATE INTEGRITY
+# ===========================================================================
+# SHA-256 hash of loaded certificate for integrity verification.
+# Calculated when certificate is loaded and compared at startup.
+# If hash doesn't match, certificate has been tampered with.
+CERTIFICATE_SHA256 = None  # Populated at runtime when certificate is loaded
+
+# ===========================================================================
 # CAPACITY & PAGE STRUCTURE
 # ===========================================================================
 MAX_MSG_CHARS = 255                 # max characters per message

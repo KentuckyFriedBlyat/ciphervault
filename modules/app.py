@@ -42,12 +42,13 @@ class VaultApplication:
         left pane  = input (plaintext for encrypt, ciphertext for decrypt)
         right pane = output (ciphertext after encrypt, cleartext after decrypt)
 
-    The single 'Process Message' button routes by the Encrypt/Decrypt toggle:
-    left pane is always input (plaintext for encrypt, ciphertext for decrypt);
-    right pane is always output. Series files can be dragged and dropped onto
-    the window (or loaded through the Load Series button) for batch processing.
-    With zero valid key sheets in either pad folder the process button is
-    locked to an inactive state.
+    The single 'Process Message' button auto-detects direction:
+    left pane is always input; right pane is always output.
+    If the input looks like plaintext (contains non-cipher characters), it's encrypted;
+    if it looks like ciphertext (pure digits in hex mode, or A-Z0-9 in printable mode),
+    it's decrypted. Series files can be dragged and dropped onto the window (or
+    loaded through the Load Series button) for batch processing. With zero valid
+    key sheets in either pad folder the process button is locked to an inactive state.
     """
 
     def __init__(self, source, sandbox=False):
@@ -595,16 +596,8 @@ class VaultApplication:
                              variable=self.fec_var)
         fcb.pack(side="left", padx=(18, 0))
         
-        # Encrypt/Decrypt toggle
-        self.direction_var = tk.StringVar(value="encrypt")
-        rb_enc = tk.Radiobutton(opts, text="Encrypt",
-                                variable=self.direction_var, value="encrypt",
-                                command=self._update_counts)
-        rb_enc.pack(side="left", padx=(18, 0))
-        rb_dec = tk.Radiobutton(opts, text="Decrypt",
-                                variable=self.direction_var, value="decrypt",
-                                command=self._update_counts)
-        rb_dec.pack(side="left")
+        # Auto-detect direction (no radio needed)
+        self.direction_var = tk.StringVar(value="auto")
         
         # Operator / Station ID section
         id_opts = tk.Frame(r)
@@ -1018,18 +1011,28 @@ class VaultApplication:
         finally:
             self._queue.put(("refresh", None))
 
-    # -- Button 2: Process Message (direction-aware) -------------------------------
+    # -- Button 2: Process Message (auto-detect direction) -------------------------------
     def on_process(self):
         if self.busy:
             return
         left = self.left_text.get("1.0", "end-1c").strip()
         if not left:
-            self._log("Nothing to process - type plaintext (encrypt) or ciphertext (decrypt) in the left pane.")
+            self._log("Nothing to process - type plaintext or ciphertext in the left pane.")
             return
-        if self.direction_var.get() == "decrypt":
-            self.run_automatic_decryption(left)
-        else:
+        
+        # Auto-detect direction based on character composition
+        mode = self.mode_var.get()
+        if mode == "hex":
+            # Hex ciphertext is purely numeric; anything else is plaintext
+            is_plaintext = not left.isdigit()
+        else:  # printable
+            # Printable ciphertext is A-Z0-9 only; anything else is plaintext
+            is_plaintext = not all(c in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" for c in left.upper())
+        
+        if is_plaintext:
             self.run_automatic_encryption(left)
+        else:
+            self.run_automatic_decryption(left)
 
     # -- encryption core ------------------------------------------------------------------
     def run_automatic_encryption(self, raw):

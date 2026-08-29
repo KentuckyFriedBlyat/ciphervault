@@ -632,7 +632,7 @@ class VaultApplication:
         panes.add(leftf, minsize=300)
         panes.add(rightf, minsize=300)
 
-        self.left_label = tk.Label(leftf, text="PLAINTEXT IN   /   CLEARTEXT OUT",
+        self.left_label = tk.Label(leftf, text="INPUT (plaintext or ciphertext)",
                                    anchor="w", bg="#eef2f7", relief="sunken")
         self.left_label.pack(fill="x")
         self.left_text = tk.Text(leftf, wrap="word", font=("Courier", 11))
@@ -640,7 +640,7 @@ class VaultApplication:
         self.left_text.bind("<KeyRelease>", lambda e: self._update_counts())
 
         self.right_label = tk.Label(rightf,
-                                    text="TRANSMISSION STRING OUT   /   RECEIVED CIPHER or SERIES IN",
+                                    text="OUTPUT (ciphertext or cleartext)",
                                     anchor="w", bg="#eef2f7", relief="sunken")
         self.right_label.pack(fill="x")
         self.right_text = tk.Text(rightf, wrap="word", font=("Courier", 11))

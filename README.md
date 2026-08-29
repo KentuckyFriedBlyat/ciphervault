@@ -134,7 +134,7 @@ This allows automation of panic triggers based on system events like:
 **Certificate Support (Optional):**
 
 CipherVault supports optional certificate-based message authentication for
-agency operations. Certificates can be loaded via the "Load Series File"
+operational workflows. Certificates can be loaded via the "Load Series File"
 button (now also accepts .pem, .crt, .cer files).
 
 ```bash

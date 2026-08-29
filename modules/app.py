@@ -39,15 +39,15 @@ def _hex_chunks(text, cap):
 class VaultApplication:
     """Google-Translate-style split screen with two operating modes.
 
-        left pane  = plaintext in (any Unicode in hex mode) / cleartext out
-        right pane = transmission string out / received cipher or series in
+        left pane  = input (plaintext for encrypt, ciphertext for decrypt)
+        right pane = output (ciphertext after encrypt, cleartext after decrypt)
 
-    The single 'Process Message' button routes by context: content in the
-    right pane is decrypted (right -> left); otherwise content in the left
-    pane is encrypted (left -> right). Series files can be dragged and
-    dropped onto the window (or loaded through the Load Series button) for batch
-    processing. With zero valid key sheets in either pad folder the process
-    button is locked to an inactive state.
+    The single 'Process Message' button routes by the Encrypt/Decrypt toggle:
+    left pane is always input (plaintext for encrypt, ciphertext for decrypt);
+    right pane is always output. Series files can be dragged and dropped onto
+    the window (or loaded through the Load Series button) for batch processing.
+    With zero valid key sheets in either pad folder the process button is
+    locked to an inactive state.
     """
 
     def __init__(self, source, sandbox=False):
@@ -595,6 +595,17 @@ class VaultApplication:
                              variable=self.fec_var)
         fcb.pack(side="left", padx=(18, 0))
         
+        # Encrypt/Decrypt toggle
+        self.direction_var = tk.StringVar(value="encrypt")
+        rb_enc = tk.Radiobutton(opts, text="Encrypt",
+                                variable=self.direction_var, value="encrypt",
+                                command=self._update_counts)
+        rb_enc.pack(side="left", padx=(18, 0))
+        rb_dec = tk.Radiobutton(opts, text="Decrypt",
+                                variable=self.direction_var, value="decrypt",
+                                command=self._update_counts)
+        rb_dec.pack(side="left")
+        
         # Operator / Station ID section
         id_opts = tk.Frame(r)
         id_opts.pack(fill="x", padx=12, pady=(0, 6))
@@ -1007,19 +1018,18 @@ class VaultApplication:
         finally:
             self._queue.put(("refresh", None))
 
-    # -- Button 2: Process Message (context-aware routing) -------------------------------
+    # -- Button 2: Process Message (direction-aware) -------------------------------
     def on_process(self):
         if self.busy:
             return
         left = self.left_text.get("1.0", "end-1c").strip()
-        right = self.right_text.get("1.0", "end-1c").strip()
-        if right:
-            self.run_automatic_decryption(right)
-        elif left:
-            self.run_automatic_encryption(left)
+        if not left:
+            self._log("Nothing to process - type plaintext (encrypt) or ciphertext (decrypt) in the left pane.")
+            return
+        if self.direction_var.get() == "decrypt":
+            self.run_automatic_decryption(left)
         else:
-            self._log("Nothing to process - type plaintext in the left pane or paste a "
-                      "received string / series in the right pane.")
+            self.run_automatic_encryption(left)
 
     # -- encryption core ------------------------------------------------------------------
     def run_automatic_encryption(self, raw):
@@ -1395,9 +1405,9 @@ class VaultApplication:
 
         self.secure_shred(pad_path)
 
-        self.left_text.delete("1.0", "end")
-        self.left_text.insert("end", plain)
         self.right_text.delete("1.0", "end")
+        self.right_text.insert("end", plain)
+        self.left_text.delete("1.0", "end")
         self._log("DECRYPTED (%s mode) | Batch %s | Pad %s" % (page["kind"], batchid, padnum))
         self._log("Clear text written to %s - treat it as a message copy, destroy when done."
                   % out_path.name)
@@ -1522,9 +1532,9 @@ class VaultApplication:
         for _pnum, pad_path, _page, _rest in numbered:
             self.secure_shred(pad_path)
 
-        self.left_text.delete("1.0", "end")
-        self.left_text.insert("end", full)
         self.right_text.delete("1.0", "end")
+        self.right_text.insert("end", full)
+        self.left_text.delete("1.0", "end")
         self._log("DECRYPTED %d-part series (%d chars assembled) | pages: %s"
                   % (total, len(full), ", ".join(t[1].name for t in numbered)))
         self._log("Clear text written to %s - destroy when done." % out_path.name)

@@ -74,6 +74,9 @@
   This allows automation of panic triggers based on system events like
   failed login attempts, intrusion detection, or other security policies.
 
+* **Updated security model documentation.** Added Operator/Station ID tracking,
+  panic button, and script hook features to the security model section.
+
 ### Added
 
 * **udev rule file** `config/99-rtlsdr.rules` — prevents the kernel DVB driver

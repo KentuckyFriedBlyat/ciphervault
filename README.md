@@ -200,6 +200,27 @@ audit/         batch records, failed captures, and operational logs
   `FECv1 <space-separated 4-char groups>` and add 8x expansion to the
   ciphertext for robustness.
 
+- **Operator/Station ID tracking** for accountability. Audit logs include
+  operator and station identification. IDs can be persisted in config or
+  cleared with secure overwrite to prevent forensic recovery.
+
+- **Panic button for immediate cleanup.** Red "PANIC" button in the GUI
+  triggers a two-step confirmation dialog. When confirmed, the program:
+  - Securely shreds operator/station IDs with multipass wipe
+  - Destroys all files in `audit/`, `Clear/`, and `Cipher/` folders
+  - Resets `config/config.py` to factory defaults
+  - Uses pad material as entropy for the secure wipe pattern
+  This immediately resets the program to a clean state. Use this when you
+  suspect compromise or need to quickly clear sensitive data from the system.
+
+- **Script hooks for automated panic triggers.** External scripts can
+  trigger the panic reset via:
+  - Command-line: `python3 ciphervault.py --panic TRIGGER_PANIC`
+  - Environment variable: `CIPHERVAULT_PANIC=TRIGGER_PANIC python3 ciphervault.py`
+  - Helper script: `CIPHERVAULT_PANIC=TRIGGER_PANIC python3 panic_trigger.py`
+  This allows automation of panic triggers based on system events like
+  failed login attempts, intrusion detection, or other security policies.
+
 ---
 
 ## 4. DVB driver override (udev rule)

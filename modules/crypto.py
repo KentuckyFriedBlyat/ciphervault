@@ -596,6 +596,37 @@ class CryptoEngine:
         except Exception:
             pass
 
+        # 4. CPU load state per core (from /proc/stat cumulative jiffies)
+        try:
+            cpu_dirs = sorted(Path('/sys/devices/system/cpu').glob('cpu[0-9]*'))
+            for cpu_dir in cpu_dirs:
+                try:
+                    stat_path = Path('/proc/stat')
+                    for line in stat_path.read_text().splitlines():
+                        if line.startswith("cpu") and "cpu%d" % int(cpu_dir.name[3:]) == line.split()[0]:
+                            payload.append("cpu_load_%s:%s" % (cpu_dir.name, line))
+                            break
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # 5. CPU current frequency per core (variable clock speed)
+        try:
+            for cpu_dir in Path('/sys/devices/system/cpu').glob('cpu[0-9]*'):
+                freq_path = cpu_dir / 'cpufreq' / 'scaling_cur_freq'
+                if freq_path.exists():
+                    payload.append("cpu_freq_%s:%s" % (cpu_dir.name, freq_path.read_text().strip()))
+        except Exception:
+            pass
+
+        # 6. Fan speeds from hardware monitoring subsystem
+        try:
+            for p in Path('/sys/class/hwmon').glob('hwmon*/fan*_input'):
+                payload.append("fan_%s:%s" % (p.parent.name, p.read_text().strip()))
+        except Exception:
+            pass
+
         # Ensure we always have an absolute baseline even on weird virtualized hardware
         if not payload:
             payload.append("ambient_die_fallback:0")

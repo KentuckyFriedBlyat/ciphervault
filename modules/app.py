@@ -182,7 +182,7 @@ class VaultApplication:
                 if st and st != "<fill in by hand>":
                     cfg.STATION_ID = st
                 
-                # Write to config file with secure overwrite
+                # Write to config file
                 config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
                 if config_path.exists():
                     content = config_path.read_text()
@@ -195,9 +195,14 @@ class VaultApplication:
                     st_line = 'STATION_ID = "%s"' % st
                     content = re.sub(r'STATION_ID = .*$', st_line, content)
                     
-                    # Securely overwrite with padding
-                    self._secure_overwrite(config_path, content)
-                    self._log("[ OK ] Operator/station IDs persisted to config (secure)")
+                    # Write without padding (config is not sensitive data)
+                    with open(config_path, 'w') as f:
+                        f.write(content)
+                        f.flush()
+                        import os
+                        os.fsync(f.fileno())
+                    
+                    self._log("[ OK ] Operator/station IDs persisted to config")
             else:
                 # Clear mode: multipass wipe to prevent recovery
                 self._log("[INFO] Clearing operator/station IDs with multipass wipe")

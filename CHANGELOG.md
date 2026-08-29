@@ -42,6 +42,13 @@
 * **Added GUI operator/station ID settings.** Text fields with "Persist in
   config" checkbox. When checked, IDs are saved to config/config.py for
   use in all subsequent pad generations.
+* **Added secure overwrite for operator/station IDs.** Files are overwritten
+  with random padding on either side to prevent forensic recovery.
+* **Added multipass wipe when clearing IDs.** When "Persist in config" is
+  unchecked, the file is wiped 3 times (random data, zeros, ones) to
+  prevent recovery of old IDs.
+* **Added memory sanitization.** After loading or clearing operator/station
+  IDs, the sensitive data is cleared from memory to prevent leakage.
 
 ### Added
 

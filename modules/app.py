@@ -83,23 +83,42 @@ class VaultApplication:
     # -- interface architecture ---------------------------------------------
     
     def _load_operator_station_from_config(self):
-        """Load operator/station IDs from config if they are persisted."""
+        """Load operator/station IDs from config if they are persisted.
+        
+        After loading, sanitizes the config module attributes to prevent
+        sensitive data from lingering in memory.
+        """
         try:
             import config.config as cfg
-            if cfg.OPERATOR_ID != "<fill in by hand>":
-                self.operator_var.set(cfg.OPERATOR_ID)
-            if cfg.STATION_ID != "<fill in by hand>":
-                self.station_var.set(cfg.STATION_ID)
+            
+            # Load operator ID
+            op = cfg.OPERATOR_ID
+            if op and op != "<fill in by hand>":
+                self.operator_var.set(op)
+                # Sanitize memory
+                del cfg.OPERATOR_ID
+                cfg.OPERATOR_ID = "<fill in by hand>"
+            
+            # Load station ID
+            st = cfg.STATION_ID
+            if st and st != "<fill in by hand>":
+                self.station_var.set(st)
+                # Sanitize memory
+                del cfg.STATION_ID
+                cfg.STATION_ID = "<fill in by hand>"
+                
         except Exception:
             pass
     
-    def _secure_overwrite(self, path, new_content):
+    def _secure_overwrite(self, path, new_content, sanitize_memory=False):
         """Securely overwrite a file to prevent forensic recovery.
         
-        Overwrites the entire file content with fixed-length strings to prevent
-        old operator/station IDs from being recoverable from the file.
+        Overwrites the file with the new content plus padding to prevent
+        old data from being recoverable. When sanitize_memory=True, also
+        clears sensitive data from memory.
         """
         import os
+        import random
         try:
             # Read current content
             with open(path, 'rb') as f:
@@ -111,20 +130,27 @@ class VaultApplication:
             # Get the new content as bytes
             new_bytes = new_content.encode('utf-8', errors='replace')
             
-            # If new content is shorter, pad it to the original length
-            if len(new_bytes) < len(old_content):
-                # Pad with spaces to prevent old data from being recoverable
-                new_bytes = new_bytes + b' ' * (len(old_content) - len(new_bytes))
+            # Add padding around the content to prevent forensic recovery
+            # Add 16 bytes of random padding on each side
+            padding_size = 16
+            random_padding = bytes([random.randint(0, 255) for _ in range(padding_size)])
+            padded_content = random_padding + new_bytes + random_padding
             
-            # If new content is longer, truncate to original length
-            elif len(new_bytes) > len(old_content):
-                new_bytes = new_bytes[:len(old_content)]
-            
-            # Write the fixed-length content
+            # Write the padded content
             with open(path, 'wb') as f:
-                f.write(new_bytes)
+                f.write(padded_content)
                 f.flush()
                 os.fsync(f.fileno())
+                
+            # If sanitizing memory, clear the content from memory
+            if sanitize_memory:
+                try:
+                    # Clear the new content from memory
+                    new_bytes[:] = b'\x00' * len(new_bytes)
+                    padded_content[:] = b'\x00' * len(padded_content)
+                    random_padding[:] = b'\x00' * len(random_padding)
+                except Exception:
+                    pass
                 
         except Exception as e:
             self._log("[WARN] Secure overwrite failed: %s" % e)
@@ -133,40 +159,105 @@ class VaultApplication:
                 f.write(new_content)
     
     def _save_operator_station_to_config(self):
-        """Save operator/station IDs to config if the persist checkbox is checked."""
-        if not self.persist_vars.get():
-            return
+        """Save operator/station IDs to config if the persist checkbox is checked.
+        
+        When persist is enabled: writes IDs with padding around them
+        When persist is disabled: does multipass wipe to prevent recovery
+        """
+        import random
+        import os
         try:
             import config.config as cfg
+            
+            # Get current values
             op = self.operator_var.get().strip()
             st = self.station_var.get().strip()
-            if op and op != "<fill in by hand>":
-                cfg.OPERATOR_ID = op
-            if st and st != "<fill in by hand>":
-                cfg.STATION_ID = st
             
-            # Write to config file with secure overwrite
-            config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
-            if config_path.exists():
-                content = config_path.read_text()
+            if self.persist_vars.get():
+                # Persist mode: write IDs with padding
+                if op and op != "<fill in by hand>":
+                    cfg.OPERATOR_ID = op
+                if st and st != "<fill in by hand>":
+                    cfg.STATION_ID = st
                 
-                # Replace OPERATOR_ID line with fixed-length padding
-                op_line = 'OPERATOR_ID = "%s"' % op
-                content = re.sub(r'OPERATOR_ID = .*$', op_line, content)
+                # Write to config file with secure overwrite
+                config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
+                if config_path.exists():
+                    content = config_path.read_text()
+                    
+                    # Replace OPERATOR_ID line
+                    op_line = 'OPERATOR_ID = "%s"' % op
+                    content = re.sub(r'OPERATOR_ID = .*$', op_line, content)
+                    
+                    # Replace STATION_ID line
+                    st_line = 'STATION_ID = "%s"' % st
+                    content = re.sub(r'STATION_ID = .*$', st_line, content)
+                    
+                    # Securely overwrite with padding
+                    self._secure_overwrite(config_path, content)
+                    self._log("[ OK ] Operator/station IDs persisted to config (secure)")
+            else:
+                # Clear mode: multipass wipe to prevent recovery
+                self._log("[INFO] Clearing operator/station IDs with multipass wipe")
                 
-                # Replace STATION_ID line with fixed-length padding
-                st_line = 'STATION_ID = "%s"' % st
-                content = re.sub(r'STATION_ID = .*$', st_line, content)
+                # Read current content
+                config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
+                if not config_path.exists():
+                    return
                 
-                # Securely overwrite the file
-                self._secure_overwrite(config_path, content)
-                self._log("[ OK ] Operator/station IDs persisted to config (secure)")
+                with open(config_path, 'rb') as f:
+                    content = f.read()
+                
+                # Convert to string
+                text = content.decode('utf-8', errors='replace')
+                
+                # Replace OPERATOR_ID with null bytes
+                text = re.sub(r'OPERATOR_ID = .*$', 'OPERATOR_ID = "\x00"', text)
+                
+                # Replace STATION_ID with null bytes
+                text = re.sub(r'STATION_ID = .*$', 'STATION_ID = "\x00"', text)
+                
+                # Convert back to bytes
+                content = text.encode('utf-8', errors='replace')
+                
+                # Multipass wipe: overwrite 3 times with different patterns
+                for i in range(3):
+                    if i == 0:
+                        # First pass: random data
+                        wipe_data = bytes([random.randint(0, 255) for _ in range(len(content))])
+                    elif i == 1:
+                        # Second pass: zeros
+                        wipe_data = b'\x00' * len(content)
+                    else:
+                        # Third pass: ones
+                        wipe_data = b'\xff' * len(content)
+                    
+                    with open(config_path, 'wb') as f:
+                        f.write(wipe_data)
+                        f.flush()
+                        os.fsync(f.fileno())
+                
+                self._log("[ OK ] Operator/station IDs wiped (3 passes)")
         except Exception as e:
-            self._log("[WARN] Could not persist operator/station IDs: %s" % e)
+            self._log("[WARN] Could not persist/clear operator/station IDs: %s" % e)
     
     def _on_close(self):
-        """Handle window close - save operator/station if persist is checked."""
-        self._save_operator_station_to_config()
+        """Handle window close - save or clear operator/station IDs."""
+        if self.persist_vars.get():
+            # Persist mode: write with padding
+            self._save_operator_station_to_config()
+        else:
+            # Clear mode: multipass wipe and sanitize memory
+            self._save_operator_station_to_config()
+            # Sanitize memory after clearing
+            try:
+                self.operator_var.set("")
+                self.station_var.set("")
+                # Clear from memory
+                self.operator_var = None
+                self.station_var = None
+            except Exception:
+                pass
         self.root.destroy()
     def build_gui(self):
         r = self.root

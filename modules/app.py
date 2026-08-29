@@ -110,6 +110,11 @@ class VaultApplication:
                 # Sanitize memory
                 del cfg.STATION_ID
                 cfg.STATION_ID = "<fill in by hand>"
+            
+            # Load persist state
+            persist = getattr(cfg, 'PERSIST_IDS', False)
+            self._log("[DEBUG] Loaded PERSIST_IDS from config: %s" % persist)
+            self.persist_vars.set(bool(persist))
                 
         except Exception as e:
             self._log("[WARN] Could not load operator/station IDs from config: %s" % e)
@@ -184,6 +189,7 @@ class VaultApplication:
                     cfg.OPERATOR_ID = op
                 if st and st != "<fill in by hand>":
                     cfg.STATION_ID = st
+                cfg.PERSIST_IDS = True
                 
                 # Write to config file
                 config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
@@ -197,6 +203,12 @@ class VaultApplication:
                     # Replace STATION_ID line
                     st_line = 'STATION_ID = "%s"' % st
                     content = re.sub(r'^STATION_ID = .*$', st_line, content, flags=re.MULTILINE)
+                    
+                    # Replace or add PERSIST_IDS line
+                    if 'PERSIST_IDS' in content:
+                        content = re.sub(r'^PERSIST_IDS = .*$', 'PERSIST_IDS = True', content, flags=re.MULTILINE)
+                    else:
+                        content = content.rstrip() + '\nPERSIST_IDS = True  # Persist operator/station IDs in config across sessions\n'
                     
                     # Write without padding (config is not sensitive data)
                     with open(config_path, 'w') as f:
@@ -226,12 +238,18 @@ class VaultApplication:
                     # Replace STATION_ID line
                     content = re.sub(r'^STATION_ID = .*$', 'STATION_ID = ""', content, flags=re.MULTILINE)
                     
+                    # Replace or add PERSIST_IDS = False
+                    if 'PERSIST_IDS' in content:
+                        content = re.sub(r'^PERSIST_IDS = .*$', 'PERSIST_IDS = False', content, flags=re.MULTILINE)
+                    else:
+                        content = content.rstrip() + '\nPERSIST_IDS = False  # Do not persist operator/station IDs\n'
+                    
                     with open(config_path, 'w') as f:
                         f.write(content)
                         f.flush()
                         os.fsync(f.fileno())
                     
-                    self._log("[ OK ] Operator/station IDs cleared")
+                    self._log("[ OK ] Operator/station IDs cleared, persist disabled")
                 except Exception as e:
                     self._log("[WARN] Could not clear operator/station IDs: %s" % e)
         except Exception as e:

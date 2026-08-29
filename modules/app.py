@@ -627,24 +627,80 @@ class VaultApplication:
             else:
                 self.process_series_file(path)
     
+    def _validate_certificate(self, cert_path):
+        """Validate that a file is a valid X.509 certificate.
+        
+        Returns (is_valid, error_message) tuple.
+        """
+        try:
+            from cryptography import x509
+            from cryptography.hazmat.primitives.serialization import load_pem_x509_certificate, load_der_x509_certificate
+            import binascii
+            
+            with open(cert_path, 'rb') as f:
+                cert_data = f.read()
+            
+            # Try PEM format first
+            try:
+                cert = load_pem_x509_certificate(cert_data)
+                return True, None
+            except Exception:
+                pass
+            
+            # Try DER format
+            try:
+                cert = load_der_x509_certificate(cert_data)
+                return True, None
+            except Exception:
+                pass
+            
+            # Try to detect if it's a valid certificate by checking ASN.1 structure
+            # X.509 certificates start with 0x30 (SEQUENCE)
+            if cert_data[:1] == b'\x30':
+                return True, "Valid X.509 certificate (DER format)"
+            
+            return False, "Not a valid X.509 certificate - invalid file format"
+            
+        except ImportError as e:
+            return False, "cryptography library not available for validation"
+        except Exception as e:
+            return False, "Certificate validation failed: %s" % e
+    
     def load_certificate(self, path):
-        """Load a certificate file into the certificates folder."""
+        """Load a certificate file into the certificates folder with validation."""
         try:
             import shutil
             from pathlib import Path
             
+            cert_path = Path(path)
+            
+            # Validate certificate before loading
+            is_valid, error_msg = self._validate_certificate(cert_path)
+            
+            if not is_valid:
+                self._log("[FAIL] Certificate validation failed: %s" % error_msg)
+                self._log("[FAIL] Certificate NOT loaded - file may be malicious")
+                return False
+            
+            # Calculate SHA before copying
+            sha256 = self._calculate_sha256(cert_path)
+            
             # Copy certificate to certificates folder
-            dest = Path(state.CERTS_DIR) / Path(path).name
-            shutil.copy2(path, dest)
+            dest = Path(state.CERTS_DIR) / cert_path.name
+            shutil.copy2(cert_path, dest)
             
-            # Update certificate status
-            self._update_certificate_status()
+            # Update certificate status with SHA
+            self._update_certificate_status(sha256)
             
-            self._log("[ OK ] Certificate loaded: %s" % Path(path).name)
+            self._log("[ OK ] Certificate validated and loaded: %s" % cert_path.name)
+            self._log("[ OK ] SHA256: %s" % sha256[:16] + "...")
             self._log("[ OK ] Certificate stored in: %s" % state.CERTS_DIR)
+            
+            return True
             
         except Exception as e:
             self._log("[FAIL] Could not load certificate: %s" % e)
+            return False
 
     # -- ledger + state locking -------------------------------------------------
     def _verified_pads(self, kind):
@@ -685,12 +741,23 @@ class VaultApplication:
         if not busy:
             self.refresh_ledger()
     
-    def _update_certificate_status(self):
+    def _calculate_sha256(self, file_path):
+        """Calculate SHA-256 hash of a file."""
+        import hashlib
+        sha256 = hashlib.sha256()
+        with open(file_path, 'rb') as f:
+            for chunk in iter(lambda: f.read(8192), b''):
+                sha256.update(chunk)
+        return sha256.hexdigest()
+    
+    def _update_certificate_status(self, sha256=None):
         """Update certificate status indicator."""
         if state.CERTS_DIR and state.CERTS_DIR.exists():
             certs = list(state.CERTS_DIR.glob("*.pem")) + list(state.CERTS_DIR.glob("*.crt")) + list(state.CERTS_DIR.glob("*.cer"))
             if certs:
                 self._log("[ OK ] Certificates loaded: %d certificate(s)" % len(certs))
+                if sha256:
+                    self._log("[ OK ] Certificate SHA256: %s" % sha256[:32] + "...")
             else:
                 self._log("[INFO] No certificates loaded")
         else:

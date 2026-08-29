@@ -1,4 +1,4 @@
-## [1.3.3-GUI] — 2026-08-29
+## [1.3.1-GUI] — 2026-08-29
 
 ### Changed
 
@@ -36,43 +36,6 @@
 * **DVB driver lock documentation** — removed section 6 ("Kernel TV driver lock
   (DVB) — AUDIT-05") from README.md. DVB driver override is now handled by
   udev rules on dedicated stations, not by the tool itself.
-
----
-
-## [1.3.2-GUI] — Internal development
-
-* Modular package structure: `modules/` + `config/`
-* Centralized configuration in `config/config.py`
-* Template-driven pad pages (printable + hex)
-* `ciphertext.py` install script (distro detection: apt/dnf/pacman/zypper)
-* Version tracking in config (bump only on crypto engine changes)
-* Pad folder renamed: `Pads/` → `Manual Pads/`
-* Pad generation limit removed (no 90-pad ceiling)
-* Streaming pad generation (constant RAM footprint)
-* Hex mode: full Unicode, spaces, punctuation support
-* AGC gain mode (replaced manual 30 dB)
-* SHA-256 hashing of raw samples (whitened entropy)
-* Relaxed raw entropy gate (7.9 bits/byte on digest stream)
-* Lowered sweep probe threshold (7.0 → 5.0 bits/byte)
-* Fixed: end-to-end pad generation with antenna
-* Removed: C sources, test scripts, probe data, nested package dir
-
----
-
-## [1.3.1-GUI] — Internal development
-
-* Initial modular refactor of single-file `ciphervault.py`
-* Preserved all original functionality:
-  * Atmospheric noise pad generation via RTL-SDR
-  * Front-end health classification (dead/overloaded/healthy)
-  * Auto-sweep for overload recovery
-  * SHA3-256 fingerprint verification
-  * Secure shredding of consumed pads
-  * Multi-part series encryption/decryption
-  * FEC (air interface error detection)
-  * DVB driver lock detection and opt-in release
-  * RAM-only captures (no raw noise on disk)
-  * Sandbox mode for offline testing
 
 ---
 

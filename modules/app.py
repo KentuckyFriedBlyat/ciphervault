@@ -380,8 +380,8 @@ class VaultApplication:
             config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
             if config_path.exists():
                 content = config_path.read_text()
-                content = re.sub(r'OPERATOR_ID = .*$', 'OPERATOR_ID = "<fill in by hand>"', content)
-                content = re.sub(r'STATION_ID = .*$', 'STATION_ID = "<fill in by hand>"', content)
+                content = re.sub(r'OPERATOR_ID = .*$', 'OPERATOR_ID = "<fill in by hand>"', content, flags=re.MULTILINE)
+                content = re.sub(r'STATION_ID = .*$', 'STATION_ID = "<fill in by hand>"', content, flags=re.MULTILINE)
                 # Also reset PERSIST_IDS to False
                 if 'PERSIST_IDS' in content:
                     content = re.sub(r'^PERSIST_IDS = .*$', 'PERSIST_IDS = False', content, flags=re.MULTILINE)

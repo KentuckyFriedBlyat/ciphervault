@@ -7,7 +7,7 @@ import math
 import re
 import time
 from . import state
-from config.config import BANNER_HEX, BANNER_PRINTABLE, BYTE_CHISQ_CRIT, BYTE_ENTROPY_MIN, CHARSET, COLS, DIGITS_PER_PAD, DIGIT_CHISQ_CRIT, FP_MARK, FREQS, GAIN, HDR_SALT, HEADER_LEN, HEX_CAP_BYTES, HEX_CODE, HEX_INV, MAX_PARTS, MAX_RETRIES, PRINTABLE_CAP, SAMPLE_BYTES, SANDBOX_MARK, SERIES_FLAG, VERSION, VERSION_MARK
+from config.config import BANNER_HEX, BANNER_PRINTABLE, BYTE_CHISQ_CRIT, BYTE_ENTROPY_MIN, CHARSET, COLS, DIGITS_PER_PAD, DIGIT_CHISQ_CRIT, FP_MARK, FREQS, GAIN, HDR_SALT, HEADER_LEN, HEX_CAP_BYTES, HEX_CODE, HEX_INV, MAX_PARTS, MAX_RETRIES, OPERATOR_ID, PRINTABLE_CAP, SAMPLE_BYTES, SANDBOX_MARK, SERIES_FLAG, STATION_ID, VERSION, VERSION_MARK
 from .noise import CaptureError, SdrNoiseSource
 
 class _ByteStream:
@@ -623,10 +623,18 @@ class CryptoEngine:
         # Harvest the live multi-point hardware thermal delta matrix
         thermal_matrix = CryptoEngine._harvest_thermal_entropy()
         sensor_count = len(thermal_matrix.split("|")) if thermal_matrix else 0
+        
+        # Add memory pressure info for additional entropy
+        try:
+            with open("/proc/meminfo", "r") as f:
+                meminfo = f.read()[:200]
+                sensor_count += 1
+        except (IOError, OSError):
+            meminfo = ""
 
         # Mix high-resolution timing strings directly with the environmental
         # state string (operational input - not key material)
-        state_mix = "%d|%s|%d" % (time.time_ns(), thermal_matrix, blocks)
+        state_mix = "%d|%s|%d|%s" % (time.time_ns(), thermal_matrix, blocks, meminfo)
         state_hash = hashlib.sha3_256(state_mix.encode('utf-8')).digest()
 
         # Extract a uniform integer between -500,000 Hz and +499,999 Hz
@@ -722,15 +730,17 @@ class CryptoEngine:
     def _record_failed_batch(out_dir, batchid, freq_mhz, reason, sandbox):
         """Write a DISCARDED batch record so the sequence stays auditable."""
         from . import state
+        from config.config import OPERATOR_ID, STATION_ID
         txt = (
             "Batch ID:        %s\n"
             "Date/time:       %s local\n"
-            "Operator:        <fill in by hand>\n"
+            "Operator:        %s\n"
+            "Station:         %s\n"
             "Frequency:       %.4f MHz (base band + thermal wobble)\n"
             "Gain / rate:     %d dB manual / 1 Msps\n"
             "Method:          SDR (atmospheric noise, PRIMARY)\n"
             "Disposition:     DISCARDED - %s\n"
-            % (batchid, date.today().isoformat(), freq_mhz, GAIN, reason)
+            % (batchid, date.today().isoformat(), OPERATOR_ID, STATION_ID, freq_mhz, GAIN, reason)
         )
         if sandbox:
             txt += SANDBOX_MARK + "\n"
@@ -904,7 +914,8 @@ class CryptoEngine:
             rec = (
                 "Batch ID:        %s\n"
                 "Date/time:       %s local\n"
-                "Operator:        <fill in by hand>\n"
+                "Operator:        %s\n"
+                "Station:         %s\n"
                 "Frequency:       %.4f MHz (base band + thermal wobble)\n"
                 "Gain / rate:     %d dB manual / 1 Msps\n"
                 "Duration:        ~%ds per batch x %d batches\n"
@@ -914,7 +925,7 @@ class CryptoEngine:
                 "Pads fed:        p01-p%02d of P%s-B%02d set\n"
                 "Method:          SDR (atmospheric noise, PRIMARY)\n"
                 "Disposition:     ACCEPTED - all three mandatory checks passed\n"
-            ) % (batchid, today, stats["cmhz"], GAIN, secs_per_batch, total_pads_generated,
+            ) % (batchid, today, OPERATOR_ID, STATION_ID, stats["cmhz"], GAIN, secs_per_batch, total_pads_generated,
                  kind.upper(), n_pads, today, bseq)
             if source.sandbox:
                 rec += SANDBOX_MARK + "\n"

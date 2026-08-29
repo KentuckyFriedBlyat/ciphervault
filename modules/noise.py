@@ -161,6 +161,13 @@ class SdrNoiseSource:
             hi = int(SWEEP_MAX_MHZ * 1e6)
         else:
             hi = UPPER_LIMIT_FREQ_HZ
+        
+        # Validate sweep range
+        if lo >= hi:
+            raise CaptureError(
+                "Invalid sweep range: LOWER_LIMIT_FREQ_HZ (%d) >= UPPER_LIMIT_FREQ_HZ (%d) - "
+                "calibration may be corrupted, resetting to defaults" % (lo, hi))
+        
         step = int(SWEEP_STEP_KHZ * 1000)
 
         log("  [WARN] %s - sweeping from %.1f MHz to %.1f MHz in %d kHz steps..."

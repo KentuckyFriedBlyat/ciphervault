@@ -5,6 +5,7 @@ crypto engine reads these values; it does not define them.
 """
 
 from textwrap import dedent
+import os
 
 # ===========================================================================
 # VERSION TRACKING
@@ -28,9 +29,29 @@ from textwrap import dedent
 # bump.
 #
 VERSION = "1.3.2-GUI"
+
+# ===========================================================================
+# CONFIG CHECKSUM
+# ===========================================================================
+# This checksum is used to verify that config/config.py hasn't been
+# tampered with or corrupted. If it doesn't match, the tool will warn
+# the operator and refuse to generate pads until the issue is resolved.
+# This prevents accidental corruption from causing security failures.
+#
+# To regenerate: python3 -c "import hashlib; print(hashlib.sha256(open('config/config.py','rb').read()).hexdigest())"
+CONFIG_CHECKSUM = "PLACEHOLDER_CHECKSUM"
 VERSION_MARK = "TOOL VERSION: "
 PRODUCT_LINE = "Core Privacy System (Standalone Workspace)"
 APP_NAME = "CipherVault"
+
+# ===========================================================================
+# OPERATOR / STATION IDENTIFICATION
+# ===========================================================================
+# These are used to identify the operator and station in audit logs.
+# They can be overridden via command-line flags (--operator, --station).
+# If not set, defaults are used.
+OPERATOR_ID = os.environ.get("CIPHERVAULT_OPERATOR", "<fill in by hand>")
+STATION_ID = os.environ.get("CIPHERVAULT_STATION", "<fill in by hand>")
 
 # ===========================================================================
 # CAPACITY & PAGE STRUCTURE

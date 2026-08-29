@@ -27,16 +27,87 @@ def main(argv=None):
     hexgen = "--hex" in argv
     fix_dvb = "--fix-dvb" in argv
     no_sweep = "--no-sweep" in argv
+    dry_run = "--dry-run" in argv
     gen_only = None
+    operator = None
+    station = None
     for i, a in enumerate(argv):
         if a == "--generate" and i + 1 < len(argv) and argv[i + 1].isdigit():
             gen_only = int(argv[i + 1])
+        elif a == "--operator" and i + 1 < len(argv):
+            operator = argv[i + 1]
+        elif a == "--station" and i + 1 < len(argv):
+            station = argv[i + 1]
 
     if selftest:
         print("SELF CHECK: %s" % ("PASS" if run_selfcheck() else "FAIL"))
         return 0
-
+    
+    # Version flag
+    if "--version" in argv:
+        from config.config import VERSION
+        print("CipherVault v%s" % VERSION)
+        return 0
+    
+    # Verify mode: check all pads in a directory
+    verify_path = None
+    for i, a in enumerate(argv):
+        if a == "--verify" and i + 1 < len(argv):
+            verify_path = argv[i + 1]
+    if verify_path:
+        from modules.crypto import CryptoEngine
+        from pathlib import Path
+        p = Path(verify_path)
+        if not p.exists():
+            print("  [FAIL] Path does not exist: %s" % verify_path)
+            return 1
+        if not p.is_dir():
+            print("  [FAIL] Path is not a directory: %s" % verify_path)
+            return 1
+        
+        print("Verifying pads in: %s" % verify_path)
+        ok_count = 0
+        fail_count = 0
+        for f in p.glob("P*.txt"):
+            ok, reason = CryptoEngine.verify_page(f)
+            if ok:
+                ok_count += 1
+                print("  [ OK ] %s" % f.name)
+            else:
+                fail_count += 1
+                print("  [FAIL] %s: %s" % (f.name, reason))
+        
+        print("")
+        print("Results: %d OK, %d FAILED, %d TOTAL" % (ok_count, fail_count, ok_count + fail_count))
+        return 0 if fail_count == 0 else 1
+    
     _banner()
+    
+    # Verify config checksum
+    try:
+        import hashlib
+        config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
+        if config_path.exists():
+            config_hash = hashlib.sha256(config_path.read_bytes()).hexdigest()
+            from config.config import CONFIG_CHECKSUM
+            if CONFIG_CHECKSUM != "PLACEHOLDER_CHECKSUM" and config_hash != CONFIG_CHECKSUM:
+                print("  [FAIL] Config checksum mismatch!")
+                print("  Expected: %s" % CONFIG_CHECKSUM)
+                print("  Actual:   %s" % config_hash)
+                print("  Config may be corrupted or tampered with.")
+                print("  Refusing to continue for security reasons.")
+                return 1
+    except Exception as e:
+        print("  [WARN] Could not verify config checksum: %s" % e)
+    
+    # Set operator/station IDs if provided via command-line
+    if operator:
+        from config.config import OPERATOR_ID, STATION_ID
+        import config.config as cfg
+        cfg.OPERATOR_ID = operator
+        cfg.STATION_ID = station
+        print("  [ OK ] Operator: %s, Station: %s" % (operator, station or "<default>"))
+    
     ws = os.environ.get("CIPHERVAULT_HOME") or str(Path(__file__).resolve().parent.parent)
     provision_dirs(ws)
     print("  [ OK ] workspace tree provisioned: Manual Pads/ HexPads/ Cipher/ Clear/ audit/ under %s"
@@ -60,6 +131,10 @@ def main(argv=None):
     EnvironmentBootstrap.dvb_gate(auto_fix=fix_dvb)
 
     if gen_only is not None:
+        if dry_run:
+            print("[DRY RUN] Would generate %d %s pads" % (gen_only, "hex" if hexgen else "printable"))
+            print("[DRY RUN] No actual generation or capture performed.")
+            return 0
         src = SandboxNoiseSource() if sandbox else SdrNoiseSource()
         try:
             CryptoEngine.trigger_generation(n_pads=gen_only,

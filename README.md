@@ -78,6 +78,10 @@ python3 ciphervault.py --generate 5 --hex   # headless: hex pads
 python3 ciphervault.py --sandbox      # sandbox noise source (TEST ONLY)
 python3 ciphervault.py --no-sweep     # hard-fail on dead/overloaded front end
 python3 ciphervault.py --fix-dvb      # release dongle from kernel TV driver
+python3 ciphervault.py --dry-run      # show what would be done without executing
+python3 ciphervault.py --verify DIR   # verify all pads in directory
+python3 ciphervault.py --version      # show version
+python3 ciphervault.py --operator NAME --station ID  # set operator/station IDs
 ```
 
 Copy `ciphervault.py` **and** the adjacent `modules/` and `config/` folders to

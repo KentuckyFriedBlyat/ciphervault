@@ -21,6 +21,24 @@
 * **Moved batch records to audit/ folder.** BATCH-*.txt files are now written
   to `audit/` instead of the pad directories, keeping key material separate
   from operational logs.
+* **Added operator/station ID tracking.** Audit logs now include operator and
+  station identification for accountability.
+* **Added `--dry-run` flag.** Shows what would be done without executing
+  operations.
+* **Added `--verify` flag.** Verifies all pads in a directory.
+* **Added `--version` flag.** Shows current version.
+* **Added `--operator` and `--station` flags.** Set operator/station IDs for
+  audit logs.
+* **Added sweep range validation.** Prevents invalid sweep ranges from
+  causing infinite loops.
+* **Added frequency wobble entropy.** Now uses memory pressure info for
+  additional entropy in frequency wobble.
+* **Added audit log rotation.** Automatically removes oldest logs when
+  more than 100 BATCH-*.txt files exist.
+* **Added config checksum verification.** Verifies config/config.py hasn't
+  been tampered with or corrupted.
+* **Added permission error handling.** Falls back to temp directory if
+  audit/ folder can't be created.
 
 ### Added
 

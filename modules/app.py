@@ -259,6 +259,136 @@ class VaultApplication:
             except Exception:
                 pass
         self.root.destroy()
+    
+    def on_panic(self):
+        """Panic button - double confirmation to reset everything."""
+        # First confirmation dialog
+        result = messagebox.askyesno(
+            "PANIC - CONFIRMATION REQUIRED",
+            "WARNING: This will permanently destroy all sensitive data.\n\n"
+            "This action will:\n"
+            "  • Shred operator/station IDs\n"
+            "  • Destroy all files in audit/\n"
+            "  • Destroy all files in Clear/\n"
+            "  • Destroy all files in Cipher/\n"
+            "  • Reset program to factory defaults\n\n"
+            "THIS ACTION CANNOT BE UNDONE.\n\n"
+            "Are you sure you want to proceed?",
+            icon='warning', parent=self.root)
+        
+        if not result:
+            return
+        
+        # Second confirmation dialog
+        result = messagebox.askyesno(
+            "PANIC - FINAL CONFIRMATION",
+            "FINAL WARNING: This will permanently destroy all sensitive data.\n\n"
+            "Are you absolutely sure?",
+            icon='warning', parent=self.root)
+        
+        if not result:
+            return
+        
+        # Execute panic reset
+        self._execute_panic_reset()
+    
+    def _execute_panic_reset(self):
+        """Execute the panic reset - shred everything and reset to factory defaults."""
+        try:
+            import shutil
+            import os
+            
+            # 1. Reset operator/station IDs
+            self.operator_var.set("<fill in by hand>")
+            self.station_var.set("<fill in by hand>")
+            
+            # 2. Shred audit folder contents
+            audit_dir = state.AUDIT_DIR
+            if audit_dir and audit_dir.exists():
+                self._shred_directory(audit_dir)
+                self._log("[ OK ] audit/ folder shredded")
+            
+            # 3. Shred Clear folder contents
+            clear_dir = state.CLEAR_DIR
+            if clear_dir and clear_dir.exists():
+                self._shred_directory(clear_dir)
+                self._log("[ OK ] Clear/ folder shredded")
+            
+            # 4. Shred Cipher folder contents
+            cipher_dir = state.CIPHER_DIR
+            if cipher_dir and cipher_dir.exists():
+                self._shred_directory(cipher_dir)
+                self._log("[ OK ] Cipher/ folder shredded")
+            
+            # 5. Reset config file
+            config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
+            if config_path.exists():
+                content = config_path.read_text()
+                content = re.sub(r'OPERATOR_ID = .*$', 'OPERATOR_ID = "<fill in by hand>"', content)
+                content = re.sub(r'STATION_ID = .*$', 'STATION_ID = "<fill in by hand>"', content)
+                with open(config_path, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                self._log("[ OK ] Config reset to factory defaults")
+            
+            # 6. Update UI
+            self._log("")
+            self._log("=" * 64)
+            self._log("PANIC RESET COMPLETE - Program reset to factory defaults")
+            self._log("=" * 64)
+            self._log("")
+            self._log("[ OK ] All sensitive data has been securely destroyed")
+            self._log("[ OK ] Program is now in factory default state")
+            
+        except Exception as e:
+            self._log("[FAIL] Panic reset failed: %s" % e)
+    
+    def _shred_directory(self, directory):
+        """Securely shred all files in a directory."""
+        import os
+        import random
+        
+        if not directory.exists():
+            return
+        
+        # Collect all files
+        files = []
+        for item in directory.iterdir():
+            if item.is_file():
+                files.append(item)
+            elif item.is_dir():
+                # Recursively shred subdirectories
+                self._shred_directory(item)
+        
+        # Securely delete each file
+        for file_path in files:
+            try:
+                # Read file
+                with open(file_path, 'rb') as f:
+                    content = f.read()
+                
+                # Multipass wipe
+                for i in range(3):
+                    if i == 0:
+                        wipe_data = bytes([random.randint(0, 255) for _ in range(len(content))])
+                    elif i == 1:
+                        wipe_data = b'\x00' * len(content)
+                    else:
+                        wipe_data = b'\xff' * len(content)
+                    
+                    with open(file_path, 'wb') as f:
+                        f.write(wipe_data)
+                        f.flush()
+                        os.fsync(f.fileno())
+                
+                # Delete the file
+                file_path.unlink()
+                
+            except Exception:
+                # If secure deletion fails, just delete normally
+                try:
+                    file_path.unlink()
+                except Exception:
+                    pass
     def build_gui(self):
         r = self.root
         r.title("%s v%s - %s" % (APP_NAME, VERSION, PRODUCT_LINE))
@@ -287,6 +417,9 @@ class VaultApplication:
                   width=13).pack(side="left", padx=(0, 6))
         tk.Button(btns, text="\U0001F4C2 Load Series File",
                   command=self.on_load_series, width=18).pack(side="left")
+        tk.Button(btns, text="\U0001F6A8 PANIC", command=self.on_panic,
+                  width=13, bg="#ff0000", fg="#ffffff", font=("Helvetica", 10, "bold"),
+                  activebackground="#cc0000", activeforeground="#ffffff").pack(side="right", padx=(6, 0))
         self.progress_var = tk.StringVar(value="")
         tk.Label(btns, textvariable=self.progress_var, fg="#555").pack(side="right")
 

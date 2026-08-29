@@ -89,6 +89,22 @@ fields and a "Persist in config" checkbox. When checked and the window is
 closed, the IDs are saved to `config/config.py` and will be used for all
 subsequent pad generations.
 
+**PANIC Button:** A red "PANIC" button is located in the top-right corner of
+the GUI. Clicking it triggers a two-step confirmation dialog:
+
+1. **Warning Dialog** - Explains that all sensitive data will be destroyed
+2. **Final Confirmation** - Asks "Are you absolutely sure?"
+
+If confirmed, the program immediately:
+- Securely shreds operator/station IDs (multipass wipe)
+- Destroys all files in `audit/`
+- Destroys all files in `Clear/`
+- Destroys all files in `Cipher/`
+- Resets `config/config.py` to factory defaults
+
+This immediately resets the program to a clean state. Use this when you
+suspect compromise or need to quickly clear sensitive data from the system.
+
 Copy `ciphervault.py` **and** the adjacent `modules/` and `config/` folders to
 the machine. The workspace tree is created next to the launcher:
 

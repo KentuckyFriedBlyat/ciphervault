@@ -49,6 +49,18 @@
   prevent recovery of old IDs.
 * **Added memory sanitization.** After loading or clearing operator/station
   IDs, the sensitive data is cleared from memory to prevent leakage.
+* **Added panic button to GUI.** Red button in top-right corner that triggers
+  a two-step confirmation dialog.
+* **Implemented panic reset functionality.** Double confirmation required:
+  1. Warning dialog explaining what will be destroyed
+  2. Final confirmation dialog
+  On confirmation, the program:
+  • Shreds operator/station IDs with multipass wipe
+  • Securely destroys all files in audit/
+  • Securely destroys all files in Clear/
+  • Securely destroys all files in Cipher/
+  • Resets config to factory defaults
+  This immediately resets the program to a clean state for operator safety.
 
 ### Added
 

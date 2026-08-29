@@ -222,23 +222,49 @@ class VaultApplication:
                     verify_content = config_path.read_text()
                     self._log("[DEBUG] Written to config: %s" % verify_content[verify_content.find('OPERATOR_ID'):verify_content.find('OPERATOR_ID')+100])
             else:
-                # Clear mode: replace ID lines with empty strings
-                self._log("[INFO] Clearing operator/station IDs from config")
+                # Clear mode: secure overwrite with random junk, then blank, then default
+                self._log("[INFO] Secure overwriting operator/station IDs with random junk")
                 
                 config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
                 if not config_path.exists():
                     return
                 
                 try:
-                    content = config_path.read_text()
+                    # Read the file
+                    with open(config_path, 'rb') as f:
+                        content = f.read()
                     
-                    # Replace OPERATOR_ID line
+                    # Replace OPERATOR_ID and STATION_ID values with random bytes
+                    def secure_replace(match):
+                        original = match.group(1)
+                        # Generate random bytes of same length
+                        junk = bytes([random.randint(0, 255) for _ in range(len(original))])
+                        return b'OPERATOR_ID = "' + junk + b'"' if match.group(0).startswith(b'OPERATOR_ID') else b'STATION_ID = "' + junk + b'"'
+                    
+                    content = re.sub(rb'OPERATOR_ID = "([^"]*)"', secure_replace, content)
+                    content = re.sub(rb'STATION_ID = "([^"]*)"', secure_replace, content)
+                    
+                    # Write random junk
+                    with open(config_path, 'wb') as f:
+                        f.write(content)
+                        f.flush()
+                        os.fsync(f.fileno())
+                    
+                    self._log("[ OK ] Operator/station IDs overwritten with random junk")
+                    
+                    # Second pass: replace with empty strings
+                    content = content.decode('utf-8', errors='replace')
                     content = re.sub(r'^OPERATOR_ID = .*$', 'OPERATOR_ID = ""', content, flags=re.MULTILINE)
-                    
-                    # Replace STATION_ID line
                     content = re.sub(r'^STATION_ID = .*$', 'STATION_ID = ""', content, flags=re.MULTILINE)
                     
-                    # Replace or add PERSIST_IDS = False
+                    with open(config_path, 'w') as f:
+                        f.write(content)
+                        f.flush()
+                        os.fsync(f.fileno())
+                    
+                    self._log("[ OK ] Random junk replaced with empty strings")
+                    
+                    # Third pass: set PERSIST_IDS = False
                     if 'PERSIST_IDS' in content:
                         content = re.sub(r'^PERSIST_IDS = .*$', 'PERSIST_IDS = False', content, flags=re.MULTILINE)
                     else:
@@ -249,9 +275,10 @@ class VaultApplication:
                         f.flush()
                         os.fsync(f.fileno())
                     
-                    self._log("[ OK ] Operator/station IDs cleared, persist disabled")
+                    self._log("[ OK ] PERSIST_IDS set to False")
+                    self._log("[ OK ] Operator/station IDs securely cleared (3-pass overwrite)")
                 except Exception as e:
-                    self._log("[WARN] Could not clear operator/station IDs: %s" % e)
+                    self._log("[WARN] Could not securely clear operator/station IDs: %s" % e)
         except Exception as e:
             self._log("[WARN] Could not persist/clear operator/station IDs: %s" % e)
     

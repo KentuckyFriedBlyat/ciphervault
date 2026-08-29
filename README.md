@@ -201,6 +201,14 @@ audit/         batch records, failed captures, and operational logs
   in the batch file for operator audit; it selects tuning only — never key
   material.
 
+  The wobble matrix includes:
+  - CPU temperature sensors (thermal zones, hwmon, ACPI)
+  - CPU load state per core (cumulative jiffies from /proc/stat)
+  - CPU variable clock speed per core (scaling_cur_freq)
+  - Fan speeds (hwmon fan inputs)
+  - Memory pressure (/proc/meminfo)
+  - Nanosecond timing
+
 - **Captures live and die in RAM.** Sanity samples are read into memory and
   tested in memory; the main capture streams 256 KB chunks from the dongle
   straight into SHA-256 digests held in RAM. No raw noise byte ever touches

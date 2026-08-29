@@ -91,6 +91,15 @@
 * **Certificate unloading triggers shred.** Removing a certificate triggers
   secure shredding of the certificates folder.
 
+* **Expanded thermal wobble matrix.** The frequency wobble now incorporates:
+  - CPU load state per core (cumulative jiffies from /proc/stat)
+  - CPU variable clock speed per core (scaling_cur_freq)
+  - Fan speeds (hwmon fan inputs)
+  - CPU temperature sensors (thermal zones, hwmon, ACPI)
+  - Memory pressure (/proc/meminfo)
+  - Nanosecond timing
+  This provides a richer, more dynamic tuning coordinate per batch.
+
 ### Added
 
 * **udev rule file** `config/99-rtlsdr.rules` — prevents the kernel DVB driver

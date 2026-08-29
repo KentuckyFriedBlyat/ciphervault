@@ -222,8 +222,8 @@ class VaultApplication:
                     verify_content = config_path.read_text()
                     self._log("[DEBUG] Written to config: %s" % verify_content[verify_content.find('OPERATOR_ID'):verify_content.find('OPERATOR_ID')+100])
             else:
-                # Clear mode: only wipe the OPERATOR_ID and STATION_ID lines
-                self._log("[INFO] Clearing operator/station IDs from config")
+                # Clear mode: securely overwrite the config file
+                self._log("[INFO] Clearing operator/station IDs with secure overwrite")
                 
                 config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
                 if not config_path.exists():
@@ -244,12 +244,10 @@ class VaultApplication:
                     else:
                         content = content.rstrip() + '\nPERSIST_IDS = False  # Do not persist operator/station IDs\n'
                     
-                    with open(config_path, 'w') as f:
-                        f.write(content)
-                        f.flush()
-                        os.fsync(f.fileno())
+                    # Securely overwrite the file
+                    self._secure_overwrite(config_path, content, sanitize_memory=False)
                     
-                    self._log("[ OK ] Operator/station IDs cleared, persist disabled")
+                    self._log("[ OK ] Operator/station IDs securely wiped, persist disabled")
                 except Exception as e:
                     self._log("[WARN] Could not clear operator/station IDs: %s" % e)
         except Exception as e:

@@ -1,4 +1,4 @@
-f�%A�벉d�I{�"""CipherVault configuration — all tunables, protocol constants, and page templates.
+"""CipherVault configuration — all tunables, protocol constants, and page templates.
 
 Everything that an operator or deployer might need to adjust lives here. The
 crypto engine reads these values; it does not define them.
@@ -305,4 +305,4 @@ TK_PKG = {
     "dnf": "python3-tkinter",
     "pacman": "tk",
     "zypper": "python-tk",
-}f�%A�벉d�I{�
+}

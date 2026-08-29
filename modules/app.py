@@ -120,9 +120,9 @@ class VaultApplication:
     def _secure_overwrite(self, path, new_content, sanitize_memory=False):
         """Securely overwrite a file to prevent forensic recovery.
         
-        Overwrites the file with the new content plus padding to prevent
-        old data from being recoverable. When sanitize_memory=True, also
-        clears sensitive data from memory.
+        Overwrites the file with the new content. When sanitize_memory=True,
+        also clears sensitive data from memory. The file is overwritten with
+        random data first, then the new content, to prevent forensic recovery.
         """
         import os
         import random
@@ -131,23 +131,29 @@ class VaultApplication:
             with open(path, 'rb') as f:
                 old_content = f.read()
             
-            # Convert to string for processing
-            content = old_content.decode('utf-8', errors='replace')
-            
             # Get the new content as bytes
             new_bytes = new_content.encode('utf-8', errors='replace')
             
-            # Add padding around the content to prevent forensic recovery
-            # Add 16 bytes of random padding on each side
-            padding_size = 16
-            random_padding = bytes([random.randint(0, 255) for _ in range(padding_size)])
-            padded_content = random_padding + new_bytes + random_padding
-            
-            # Write the padded content
+            # First pass: overwrite with random data of same size
+            random_data = bytes([random.randint(0, 255) for _ in range(len(old_content))])
             with open(path, 'wb') as f:
-                f.write(padded_content)
+                f.write(random_data)
                 f.flush()
                 os.fsync(f.fileno())
+            
+            # Second pass: write the new content
+            with open(path, 'wb') as f:
+                f.write(new_bytes)
+                f.flush()
+                os.fsync(f.fileno())
+            
+            # If sanitizing memory, clear the content from memory
+            if sanitize_memory:
+                try:
+                    # Clear the new content from memory
+                    new_bytes[:] = b'\x00' * len(new_bytes)
+                except Exception:
+                    pass
                 
             # If sanitizing memory, clear the content from memory
             if sanitize_memory:

@@ -311,9 +311,10 @@ class VaultApplication:
             "WARNING: This will permanently destroy all sensitive data.\n\n"
             "This action will:\n"
             "  • Shred operator/station IDs\n"
-            "  • Destroy all files in audit/\n"
-            "  • Destroy all files in Clear/\n"
-            "  • Destroy all files in Cipher/\n"
+            "  • Delete all files in audit/\n"
+            "  • Delete all files in Clear/\n"
+            "  • Delete all files in Cipher/\n"
+            "  • Delete all files in certificates/\n"
             "  • Reset program to factory defaults\n\n"
             "THIS ACTION CANNOT BE UNDONE.\n\n"
             "Are you sure you want to proceed?",
@@ -353,8 +354,9 @@ class VaultApplication:
             # 3. Shred audit folder contents using pad entropy
             audit_dir = state.AUDIT_DIR
             if audit_dir and audit_dir.exists():
+                self._log("[INFO] Shredding audit/ folder...")
                 self._shred_directory_with_entropy(audit_dir, pad_entropy)
-                self._log("[ OK ] audit/ folder shredded using pad entropy")
+                self._log("[ OK ] audit/ folder shredded")
             
             # 4. Shred Clear folder contents using pad entropy
             clear_dir = state.CLEAR_DIR
@@ -380,9 +382,14 @@ class VaultApplication:
                 content = config_path.read_text()
                 content = re.sub(r'OPERATOR_ID = .*$', 'OPERATOR_ID = "<fill in by hand>"', content)
                 content = re.sub(r'STATION_ID = .*$', 'STATION_ID = "<fill in by hand>"', content)
+                # Also reset PERSIST_IDS to False
+                if 'PERSIST_IDS' in content:
+                    content = re.sub(r'^PERSIST_IDS = .*$', 'PERSIST_IDS = False', content, flags=re.MULTILINE)
+                else:
+                    content = content.rstrip() + '\nPERSIST_IDS = False  # Do not persist operator/station IDs\n'
                 # Securely overwrite config with pad entropy
                 self._secure_overwrite(config_path, content, sanitize_memory=False)
-                self._log("[ OK ] Config reset to factory defaults")
+                self._log("[ OK ] Config reset to factory defaults (persist disabled)")
             
             # 7. Update UI
             self._log("")
@@ -469,8 +476,9 @@ class VaultApplication:
                         f.flush()
                         os.fsync(f.fileno())
                 
-                # Delete the file
+                # Unlink the file after overwriting
                 file_path.unlink()
+                self._log("[ OK ] Shredded: %s" % file_path.name)
                 
             except Exception:
                 # If secure deletion fails, just delete normally

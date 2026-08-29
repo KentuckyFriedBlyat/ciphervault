@@ -95,6 +95,7 @@ class VaultApplication:
             
             # Load operator ID
             op = cfg.OPERATOR_ID
+            self._log("[DEBUG] Loaded OPERATOR_ID from config: '%s'" % op)
             if op and op != "<fill in by hand>":
                 self.operator_var.set(op)
                 # Sanitize memory
@@ -103,14 +104,15 @@ class VaultApplication:
             
             # Load station ID
             st = cfg.STATION_ID
+            self._log("[DEBUG] Loaded STATION_ID from config: '%s'" % st)
             if st and st != "<fill in by hand>":
                 self.station_var.set(st)
                 # Sanitize memory
                 del cfg.STATION_ID
                 cfg.STATION_ID = "<fill in by hand>"
                 
-        except Exception:
-            pass
+        except Exception as e:
+            self._log("[WARN] Could not load operator/station IDs from config: %s" % e)
     
     def _secure_overwrite(self, path, new_content, sanitize_memory=False):
         """Securely overwrite a file to prevent forensic recovery.
@@ -176,7 +178,8 @@ class VaultApplication:
             st = self.station_var.get().strip()
             
             if self.persist_vars.get():
-                # Persist mode: write IDs with padding
+                # Persist mode: write IDs to config
+                self._log("[DEBUG] Persisting - Operator: '%s', Station: '%s'" % (op, st))
                 if op and op != "<fill in by hand>":
                     cfg.OPERATOR_ID = op
                 if st and st != "<fill in by hand>":
@@ -189,11 +192,11 @@ class VaultApplication:
                     
                     # Replace OPERATOR_ID line
                     op_line = 'OPERATOR_ID = "%s"' % op
-                    content = re.sub(r'OPERATOR_ID = .*$', op_line, content)
+                    content = re.sub(r'^OPERATOR_ID = .*$', op_line, content, flags=re.MULTILINE)
                     
                     # Replace STATION_ID line
                     st_line = 'STATION_ID = "%s"' % st
-                    content = re.sub(r'STATION_ID = .*$', st_line, content)
+                    content = re.sub(r'^STATION_ID = .*$', st_line, content, flags=re.MULTILINE)
                     
                     # Write without padding (config is not sensitive data)
                     with open(config_path, 'w') as f:
@@ -203,6 +206,9 @@ class VaultApplication:
                         os.fsync(f.fileno())
                     
                     self._log("[ OK ] Operator/station IDs persisted to config")
+                    # Verify what was written
+                    verify_content = config_path.read_text()
+                    self._log("[DEBUG] Written to config: %s" % verify_content[verify_content.find('OPERATOR_ID'):verify_content.find('OPERATOR_ID')+100])
             else:
                 # Clear mode: only wipe the OPERATOR_ID and STATION_ID lines
                 self._log("[INFO] Clearing operator/station IDs from config")
@@ -215,10 +221,10 @@ class VaultApplication:
                     content = config_path.read_text()
                     
                     # Replace OPERATOR_ID line
-                    content = re.sub(r'OPERATOR_ID = .*$', 'OPERATOR_ID = ""', content)
+                    content = re.sub(r'^OPERATOR_ID = .*$', 'OPERATOR_ID = ""', content, flags=re.MULTILINE)
                     
                     # Replace STATION_ID line
-                    content = re.sub(r'STATION_ID = .*$', 'STATION_ID = ""', content)
+                    content = re.sub(r'^STATION_ID = .*$', 'STATION_ID = ""', content, flags=re.MULTILINE)
                     
                     with open(config_path, 'w') as f:
                         f.write(content)

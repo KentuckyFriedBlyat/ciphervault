@@ -50,9 +50,9 @@ APP_NAME = "CipherVault"
 # These are used to identify the operator and station in audit logs.
 # They can be overridden via command-line flags (--operator, --station).
 # If not set, defaults are used.
-OPERATOR_ID = "dfsaDF"
-STATION_ID = "FSADFs"
-PERSIST_IDS = True  # Persist operator/station IDs in config across sessions
+OPERATOR_ID = ""
+STATION_ID = ""
+PERSIST_IDS = False
 
 # ===========================================================================
 # CERTIFICATE INTEGRITY

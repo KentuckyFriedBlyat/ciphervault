@@ -95,16 +95,15 @@ class VaultApplication:
             
             # Load operator ID
             op = cfg.OPERATOR_ID
-            self._log("[DEBUG] Loaded OPERATOR_ID from config: '%s'" % op)
             if op and op != "<fill in by hand>":
                 self.operator_var.set(op)
+                self._log("[ OK ] Loaded operator/station IDs from config")
                 # Sanitize memory
                 del cfg.OPERATOR_ID
                 cfg.OPERATOR_ID = "<fill in by hand>"
             
             # Load station ID
             st = cfg.STATION_ID
-            self._log("[DEBUG] Loaded STATION_ID from config: '%s'" % st)
             if st and st != "<fill in by hand>":
                 self.station_var.set(st)
                 # Sanitize memory
@@ -113,7 +112,6 @@ class VaultApplication:
             
             # Load persist state
             persist = getattr(cfg, 'PERSIST_IDS', False)
-            self._log("[DEBUG] Loaded PERSIST_IDS from config: %s" % persist)
             self.persist_vars.set(bool(persist))
                 
         except Exception as e:
@@ -184,7 +182,6 @@ class VaultApplication:
             
             if self.persist_vars.get():
                 # Persist mode: write IDs to config
-                self._log("[DEBUG] Persisting - Operator: '%s', Station: '%s'" % (op, st))
                 if op and op != "<fill in by hand>":
                     cfg.OPERATOR_ID = op
                 if st and st != "<fill in by hand>":
@@ -217,13 +214,10 @@ class VaultApplication:
                         import os
                         os.fsync(f.fileno())
                     
-                    self._log("[ OK ] Operator/station IDs persisted to config")
-                    # Verify what was written
-                    verify_content = config_path.read_text()
-                    self._log("[DEBUG] Written to config: %s" % verify_content[verify_content.find('OPERATOR_ID'):verify_content.find('OPERATOR_ID')+100])
+                    self._log("[ OK ] Operator/station IDs persisted to config for next session")
             else:
                 # Clear mode: secure overwrite with random junk, then blank, then default
-                self._log("[INFO] Secure overwriting operator/station IDs with random junk")
+                self._log("[INFO] Unchecking persist - securely wiping operator/station IDs")
                 
                 config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
                 if not config_path.exists():
@@ -250,7 +244,7 @@ class VaultApplication:
                         f.flush()
                         os.fsync(f.fileno())
                     
-                    self._log("[ OK ] Operator/station IDs overwritten with random junk")
+                    self._log("[ OK ] Pass 1/3: ID values overwritten with random junk")
                     
                     # Second pass: replace with empty strings
                     content = content.decode('utf-8', errors='replace')
@@ -262,7 +256,7 @@ class VaultApplication:
                         f.flush()
                         os.fsync(f.fileno())
                     
-                    self._log("[ OK ] Random junk replaced with empty strings")
+                    self._log("[ OK ] Pass 2/3: random junk replaced with empty strings")
                     
                     # Third pass: set PERSIST_IDS = False
                     if 'PERSIST_IDS' in content:
@@ -275,8 +269,8 @@ class VaultApplication:
                         f.flush()
                         os.fsync(f.fileno())
                     
-                    self._log("[ OK ] PERSIST_IDS set to False")
-                    self._log("[ OK ] Operator/station IDs securely cleared (3-pass overwrite)")
+                    self._log("[ OK ] Pass 3/3: persist state disabled")
+                    self._log("[ OK ] Operator/station IDs securely wiped - data will not persist to next session")
                 except Exception as e:
                     self._log("[WARN] Could not securely clear operator/station IDs: %s" % e)
         except Exception as e:

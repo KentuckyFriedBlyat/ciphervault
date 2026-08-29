@@ -136,6 +136,12 @@
   Only the first definition was being executed, causing the sweep logic to
   be ignored.
 * **Operator/station IDs persist when "Persist in config" is checked.** Two bugs fixed: (1) duplicate `_on_close` method at bottom of `modules/app.py` overrode the persistence handler — merged into one. (2) the "clear mode" path was overwriting the *entire* `config/config.py` with random data/zeros/ones instead of just clearing the OPERATOR_ID/STATION_ID lines, corrupting the config file permanently. Subsequent persist attempts then failed silently against the corrupted file. Now only the two ID lines are zeroed on clear.
+* **Persist checkbox state now persists across sessions.** Added `PERSIST_IDS` variable to `config/config.py` to track the "Persist in config" checkbox state. When checked, IDs are saved and `PERSIST_IDS = True`; when unchecked, IDs are cleared and `PERSIST_IDS = False`. The checkbox state is now correctly restored on program launch.
+* **Clear mode now uses 3-pass secure overwrite.** When unchecking "Persist in config", the operator/station IDs are now securely wiped with a 3-pass overwrite: (1) random junk of same length, (2) empty strings, (3) default values. This thwarts forensic recovery of the original IDs.
+* **Panic button now properly deletes audit files.** Fixed a bug where the panic function was overwriting audit files with random entropy but not actually deleting them — files remained on disk with random content. Now audit files are properly unlinked after secure overwrite.
+* **Panic button now resets PERSIST_IDS.** The panic reset function now sets `PERSIST_IDS = False` in config, ensuring the persist checkbox is unchecked on next launch and triggering the secure wipe of operator/station IDs.
+* **Process Message button now auto-detects direction.** Removed the Encrypt/Decrypt radio button toggle. Direction is now auto-detected based on character composition: hex mode ciphertext is purely numeric (0-9), printable mode ciphertext is A-Z0-9 only. Anything else is treated as plaintext. Left pane is always input, right pane is always output.
+* **Left/right pane swapped to Input/Output.** Left pane is now always input (type plaintext to encrypt, paste ciphertext to decrypt), right pane is always output. Updated pane labels to reflect this: "INPUT (plaintext or ciphertext)" and "OUTPUT (ciphertext or cleartext)".
 
 ---
 

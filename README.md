@@ -87,7 +87,22 @@ python3 ciphervault.py --operator NAME --station ID  # set operator/station IDs
 **GUI Settings:** The GUI includes an Operator / Station ID section with text
 fields and a "Persist in config" checkbox. When checked and the window is
 closed, the IDs are saved to `config/config.py` and will be used for all
-subsequent pad generations.
+subsequent pad generations. The checkbox state also persists across sessions.
+
+**Process Message Button:** The single "Process Message" button auto-detects
+direction based on character composition:
+- **Hex mode:** If input contains non-digit characters → plaintext → encrypt;
+  if input is all digits → ciphertext → decrypt
+- **Printable mode:** If input contains non-A-Z0-9 characters → plaintext → encrypt;
+  if input is all A-Z0-9 → ciphertext → decrypt
+
+Left pane is always input (type plaintext to encrypt, paste ciphertext to decrypt);
+right pane is always output (ciphertext appears after encrypt, cleartext after decrypt).
+
+**Split Long Messages:** With "Multipart MSG" enabled, a message longer than one
+page's capacity is split across multiple pads. Each part burns its own pad page
+and reserves its first two characters for the part number. The receiver refuses
+to decrypt a series unless all parts are present.
 
 **PANIC Button:** A red "PANIC" button is located in the top-right corner of
 the GUI. Clicking it triggers a two-step confirmation dialog:
@@ -238,9 +253,9 @@ audit/         batch records, failed captures, and operational logs
 
 - **Panic button for immediate cleanup.** Red "PANIC" button in the GUI
   triggers a two-step confirmation dialog. When confirmed, the program:
-  - Securely shreds operator/station IDs with multipass wipe
-  - Destroys all files in `audit/`, `Clear/`, and `Cipher/` folders
-  - Resets `config/config.py` to factory defaults
+  - Securely shreds operator/station IDs with 3-pass overwrite (random junk → blank → default)
+  - Deletes all files in `audit/`, `Clear/`, `Cipher/`, and `certificates/` folders
+  - Resets `config/config.py` to factory defaults (including `PERSIST_IDS = False`)
   - Uses pad material as entropy for the secure wipe pattern
   This immediately resets the program to a clean state. Use this when you
   suspect compromise or need to quickly clear sensitive data from the system.

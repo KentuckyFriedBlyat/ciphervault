@@ -58,6 +58,7 @@ class VaultApplication:
         self._selfcheck_state = "running..."
         self._selfcheck_running = False
         self._antenna_nag_shown = False
+        self._antenna_ok = None  # threading.Event for blocking dialog
         if HAVE_DND:
             self.root = TkinterDnD.Tk()
         else:
@@ -792,6 +793,10 @@ class VaultApplication:
                     self._log("SELF CHECK: %s" % ("PASS" if ok else "FAIL"))
                 elif kind == "nag":
                     messagebox.showwarning(APP_NAME, payload)
+                elif kind == "nag_wait":
+                    messagebox.showwarning(APP_NAME, payload)
+                    if self._antenna_ok is not None:
+                        self._antenna_ok.set()
                 elif kind == "refresh":
                     self.progress_var.set("")
                     self._set_busy(False)
@@ -935,10 +940,13 @@ class VaultApplication:
             self._queue.put(("log", "Captures lived and died in RAM - nothing raw was "
                                     "written to disk."))
         except CaptureError as e:
-            # First sweep failure: nag the operator about the antenna
+            # First sweep failure: nag the operator about the antenna and wait
             if not self._antenna_nag_shown:
                 self._antenna_nag_shown = True
-                self._queue.put(("nag", "Did you remember to connect the antenna?\n\n" + str(e)))
+                self._antenna_ok = threading.Event()
+                self._queue.put(("nag_wait", "Did you remember to connect the antenna?\n\n" + str(e)))
+                # Block until the dialog is dismissed
+                self._antenna_ok.wait()
             else:
                 self._queue.put(("log", "[FAIL] pad generation stopped: %s" % e))
         except Exception as e:

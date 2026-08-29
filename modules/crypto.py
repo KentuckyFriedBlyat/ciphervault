@@ -852,12 +852,29 @@ class CryptoEngine:
         written = []
         total_pads_generated = 0
         total_pads_failed = 0
+        consecutive_failures = 0
         try:
             while total_pads_generated < n_pads:
                 # ---- capture one pad's worth of entropy -------------------
                 bseq += 1
                 batchid = "B%s-%s%s-%02d" % (y, m, d, bseq)
                 pad_ok = False
+                
+                # If we had two consecutive failures, trigger a fresh frequency search
+                if consecutive_failures >= 2:
+                    log("[INFO] Two consecutive failures - triggering fresh frequency search...")
+                    for f in FREQS:
+                        try:
+                            freq_search, note = source.resolve_frequency(f, auto_sweep=True, log=log)
+                            log("  [ OK ] Fresh search found clean spot: %.4f MHz (%s)" % (freq_search / 1000000, note))
+                            base_freq = freq_search
+                            break
+                        except Exception:
+                            continue
+                    else:
+                        log("  [WARN] Fresh frequency search failed - continuing with rotation")
+                    consecutive_failures = 0
+                
                 for attempt in range(1, MAX_RETRIES + 1):
                     base_freq = FREQS[(attempt - 1) % len(FREQS)]   # rotate base band each retry
                     freq, sensors = CryptoEngine.apply_frequency_wobble(base_freq, blocks_per_pad)
@@ -876,22 +893,23 @@ class CryptoEngine:
                         digest_bytes, stats = CryptoEngine._capture_and_verify(
                             freq, blocks, 1, source, log)
                         pad_ok = True
+                        consecutive_failures = 0  # Reset consecutive failure counter
                         break
                     except CaptureError as e:
                         CryptoEngine._record_failed_batch(out_dir, batchid, freq / 1000000,
                                                           str(e), source.sandbox)
-                        log("  [WARN] batch discarded: %s (any failed check discards the whole batch)" % e)
+                        log("  [WARN] batch discarded: %s" % e)
                         if attempt < MAX_RETRIES:
                             time.sleep(2)     # re-capture at a different frequency AND time
                         else:
-                            log("  [FAIL] pad %d failed after %d attempts - skipping" % (p, MAX_RETRIES))
-                            # Mark this pad as failed and continue to next
+                            log("  [FAIL] pad %d failed after %d attempts - skipping" % (total_pads_generated + 1, MAX_RETRIES))
+                            consecutive_failures += 1
                             break
                 
-                # If this pad failed, skip it and try the next one
+                # If this pad failed, log it and continue to next
                 if not pad_ok:
                     total_pads_failed += 1
-                    log("  [INFO] Skipping pad %d - continuing with next pad" % p)
+                    log("  [INFO] Skipping pad %d - continuing with next pad" % (total_pads_generated + 1))
                     continue
 
                 # ---- generate and write ONE pad from the verified stream ---

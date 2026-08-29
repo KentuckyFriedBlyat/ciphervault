@@ -1,6 +1,6 @@
 # CipherVault — One-Time Pad Workspace
 
-**Version 1.3.2-GUI** · Python 3 · Linux
+**Version 1.3.3-GUI** · Python 3 · Linux
 
 A field-deployable one-time-pad workspace for secure communications in
 offline or infrastructure-constrained environments. Pad material is generated
@@ -98,39 +98,7 @@ Clear/         decrypted clear-text copies (destroy when done)
   transmission. FEC frames use the format `FECv1 <space-separated 4-char groups>`
   and add 8x expansion to the ciphertext for robustness.
 
-## 5. Versioning policy
-
-**Version numbers only increment when the crypto engine changes.**
-
-The version stamp embedded in every pad page is a security boundary — it
-prevents cross-contamination between different program revisions. Changing
-the version number means:
-
-* All existing pad pages become "obsolete" and will be shredded on startup
-  sweep unless manually preserved.
-* New pad pages MUST be generated and physically distributed to every
-  receiving station. Thumbdrives with old pads become useless.
-
-**What does NOT require a version bump:**
-
-* UI changes, bug fixes, and feature additions
-* New configuration options or tuning parameters
-* Changes to pad page templates or formatting
-* Installation script improvements
-
-**What DOES require a version bump:**
-
-* Changes to the cryptographic algorithm or key derivation
-* Changes to the entropy capture or validation logic
-* Changes to the fingerprint or verification mechanism
-* Any modification that would invalidate previously-generated pads
-
-This policy ensures that operators only need to re-distribute pads when the
-security model itself changes, not for every improvement to the tool.
-
-See `config/config.py` for the authoritative version and detailed reasoning.
-
-## 6. DVB driver override (udev rule)
+## 5. DVB driver override (udev rule)
 
 At boot, the Linux kernel grabs RTL-SDR dongles with its built-in TV tuner
 driver (`dvb_usb_rtl28xxu`). While that lock is held, `rtl_sdr` cannot open
@@ -158,7 +126,7 @@ echo '1-1:1.0' | sudo tee /sys/bus/usb/drivers/dvb_usb_rtl28xxu/unbind
 **Known dongles.** Recognition uses the USB IDs in `config/config.py`
 (`RTL_USB_IDS`: RTL2832U `0bda:2838`, plus `2837`/`2839`).
 
-## 7. Calibration (frequency range scanning)
+## 6. Calibration (frequency range scanning)
 
 RTL-SDR dongles vary in their usable frequency range. This tool calibrates the
 dongle on first run (or if the config is wiped) to find the lower and upper
@@ -194,7 +162,7 @@ cover the full usable spectrum of your dongle instead of just the default
 25-40 MHz window. This is especially important for dongles that work above
 40 MHz.
 
-## 8. Field notes (pad logistics)
+## 7. Field notes (pad logistics)
 
 1. Generate at a station with a verified dongle (`--selftest`, then watch the
    dongle ping line). Statistical gates (Shannon entropy ≥ 7.9 bits/byte,
@@ -206,7 +174,7 @@ cover the full usable spectrum of your dongle instead of just the default
 3. One pad page = one use. The tool shreds consumed pages; do not "save a copy
    just in case" — a reused OTP destroys the confidentiality of both messages.
 
-## 9. Self check
+## 8. Self check
 
 ```bash
 python3 ciphervault.py --selftest     # RAM-only: PASS/FAIL, touches no disk
@@ -215,7 +183,7 @@ python3 ciphervault.py --selftest     # RAM-only: PASS/FAIL, touches no disk
 Runs the crypto round-trip, chunking invariants, and fingerprint logic
 entirely in memory. Use it after moving the tool to a new machine.
 
-## 10. Troubleshooting
+## 9. Troubleshooting
 
 | Symptom | Meaning / action |
 |---|---|

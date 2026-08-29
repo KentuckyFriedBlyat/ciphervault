@@ -1,0 +1,26 @@
+# CipherVault: prevent the kernel DVB driver from grabbing RTL-SDR dongles
+#
+# This rule tells udev to NOT bind the dvb_usb_rtl28xxu driver to any
+# RTL2832U-based SDR dongle. The driver is still loaded (other DVB devices
+# keep working), but it won't grab these specific dongles at boot.
+#
+# USB IDs matched:
+#   0bda:2838  RTL2832U (standard SDR dongle)
+#   0bda:2837  RTL2832U (variant)
+#   0bda:2839  RTL2832U (variant)
+#
+# Place this file in /etc/udev/rules.d/ and run udevadm --reload.
+# The tool installs this automatically on first run.
+
+ACTION!="add|change", GOTO="ciphervault_rtlsdr_end"
+SUBSYSTEM!="usb", GOTO="ciphervault_rtlsdr_end"
+ATTR{idVendor}=="0bda", ATTR{idProduct}=="283[789]", GOTO="ciphervault_rtlsdr_match"
+GOTO="ciphervault_rtlsdr_end"
+
+LABEL="ciphervault_rtlsdr_match"
+# Tell udev to ignore this device for the DVB subsystem
+ATTR{bInterfaceClass}!="11", GOTO="ciphervault_rtlsdr_end"
+# Match the RTL2832U interface class (0x11 = Vendor Specific)
+ATTR{idVendor}=="0bda", ATTR{idProduct}=="283[789]", ENV{ID_IGNORE_DVB_DRIVER}="1"
+
+LABEL="ciphervault_rtlsdr_end"

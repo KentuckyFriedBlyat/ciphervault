@@ -1,0 +1,26 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Operational data — never commit pads or ciphertext
+Manual Pads/
+HexPads/
+Cipher/
+Clear/
+*.key
+*.pad
+*.cipher
+
+# Config secrets (if any get added later)
+config/secrets.*
+
+# Temporary / scratch
+*.tmp
+*.swp
+*.swo
+*~

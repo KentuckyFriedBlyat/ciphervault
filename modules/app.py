@@ -204,47 +204,30 @@ class VaultApplication:
                     
                     self._log("[ OK ] Operator/station IDs persisted to config")
             else:
-                # Clear mode: multipass wipe to prevent recovery
-                self._log("[INFO] Clearing operator/station IDs with multipass wipe")
+                # Clear mode: only wipe the OPERATOR_ID and STATION_ID lines
+                self._log("[INFO] Clearing operator/station IDs from config")
                 
-                # Read current content
                 config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
                 if not config_path.exists():
                     return
                 
-                with open(config_path, 'rb') as f:
-                    content = f.read()
-                
-                # Convert to string
-                text = content.decode('utf-8', errors='replace')
-                
-                # Replace OPERATOR_ID with null bytes
-                text = re.sub(r'OPERATOR_ID = .*$', 'OPERATOR_ID = "\x00"', text)
-                
-                # Replace STATION_ID with null bytes
-                text = re.sub(r'STATION_ID = .*$', 'STATION_ID = "\x00"', text)
-                
-                # Convert back to bytes
-                content = text.encode('utf-8', errors='replace')
-                
-                # Multipass wipe: overwrite 3 times with different patterns
-                for i in range(3):
-                    if i == 0:
-                        # First pass: random data
-                        wipe_data = bytes([random.randint(0, 255) for _ in range(len(content))])
-                    elif i == 1:
-                        # Second pass: zeros
-                        wipe_data = b'\x00' * len(content)
-                    else:
-                        # Third pass: ones
-                        wipe_data = b'\xff' * len(content)
+                try:
+                    content = config_path.read_text()
                     
-                    with open(config_path, 'wb') as f:
-                        f.write(wipe_data)
+                    # Replace OPERATOR_ID line
+                    content = re.sub(r'OPERATOR_ID = .*$', 'OPERATOR_ID = ""', content)
+                    
+                    # Replace STATION_ID line
+                    content = re.sub(r'STATION_ID = .*$', 'STATION_ID = ""', content)
+                    
+                    with open(config_path, 'w') as f:
+                        f.write(content)
                         f.flush()
                         os.fsync(f.fileno())
-                
-                self._log("[ OK ] Operator/station IDs wiped (3 passes)")
+                    
+                    self._log("[ OK ] Operator/station IDs cleared")
+                except Exception as e:
+                    self._log("[WARN] Could not clear operator/station IDs: %s" % e)
         except Exception as e:
             self._log("[WARN] Could not persist/clear operator/station IDs: %s" % e)
     

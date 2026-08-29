@@ -127,7 +127,7 @@
   duplicate method definition that was shadowing the primary implementation.
   Only the first definition was being executed, causing the sweep logic to
   be ignored.
-* **Operator/station IDs no longer wiped on window close when "Persist in config" is checked.** The GUI had two `_on_close` methods defined in `modules/app.py`; Python uses the last definition, so the duplicate at the bottom of the file overrode the one that handled operator/station persistence. The persist path was never reached, and IDs were cleared on close regardless of the checkbox state. Merged both handlers into a single `_on_close` that runs both the persistence/wipe logic *and* the sandbox cleanup.
+* **Operator/station IDs persist when "Persist in config" is checked.** Two bugs fixed: (1) duplicate `_on_close` method at bottom of `modules/app.py` overrode the persistence handler — merged into one. (2) the "clear mode" path was overwriting the *entire* `config/config.py` with random data/zeros/ones instead of just clearing the OPERATOR_ID/STATION_ID lines, corrupting the config file permanently. Subsequent persist attempts then failed silently against the corrupted file. Now only the two ID lines are zeroed on clear.
 
 ---
 

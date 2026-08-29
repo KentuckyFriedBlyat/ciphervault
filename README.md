@@ -122,7 +122,7 @@ python3 ciphervault.py --panic TRIGGER_PANIC
 CIPHERVAULT_PANIC=TRIGGER_PANIC python3 ciphervault.py
 
 # Helper script
-CIPHERVAULT_PANIC=TRIGGER_PANIC python3 panic_trigger.py
+CIPHERVAULT_PANIC=TRIGGER_PANIC python3 modules/panic_trigger.py
 ```
 
 This allows automation of panic triggers based on system events like:
@@ -249,7 +249,7 @@ audit/         batch records, failed captures, and operational logs
   trigger the panic reset via:
   - Command-line: `python3 ciphervault.py --panic TRIGGER_PANIC`
   - Environment variable: `CIPHERVAULT_PANIC=TRIGGER_PANIC python3 ciphervault.py`
-  - Helper script: `CIPHERVAULT_PANIC=TRIGGER_PANIC python3 panic_trigger.py`
+  - Helper script: `CIPHERVAULT_PANIC=TRIGGER_PANIC python3 modules/panic_trigger.py`
   This allows automation of panic triggers based on system events like
   failed login attempts, intrusion detection, or other security policies.
 

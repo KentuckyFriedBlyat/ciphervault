@@ -26,12 +26,12 @@ def trigger_panic():
     # Set the environment variable to trigger panic
     os.environ["CIPHERVAULT_PANIC"] = "TRIGGER_PANIC"
     
-    # Find the ciphervault.py script
+    # Find the ciphervault.py script (one level up from modules/)
     script_dir = Path(__file__).resolve().parent
-    ciphervault_py = script_dir / "ciphervault.py"
+    ciphervault_py = script_dir.parent / "ciphervault.py"
     
     if not ciphervault_py.exists():
-        print("[ERROR] ciphervault.py not found in %s" % script_dir)
+        print("[ERROR] ciphervault.py not found in %s" % script_dir.parent)
         return False
     
     # Run ciphervault.py with the panic trigger

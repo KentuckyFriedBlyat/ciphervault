@@ -141,7 +141,7 @@ def main(argv=None):
     
     ws = os.environ.get("CIPHERVAULT_HOME") or str(Path(__file__).resolve().parent.parent)
     provision_dirs(ws)
-    print("  [ OK ] workspace tree provisioned: Manual Pads/ HexPads/ Cipher/ Clear/ audit/ under %s"
+    print("  [ OK ] workspace tree provisioned: Manual Pads/ HexPads/ Cipher/ Clear/ audit/ certificates/ under %s"
           % state.WORKSPACE)
 
     # 1. System binary check (explicit alert + install terminal + clean re-exec)

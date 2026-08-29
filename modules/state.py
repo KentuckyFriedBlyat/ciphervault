@@ -4,7 +4,7 @@ from pathlib import Path
 
 # Workspace root - set in main(); defaults to this file's directory.
 WORKSPACE = None
-PADS_DIR = HEXPADS_DIR = CIPHER_DIR = CLEAR_DIR = AUDIT_DIR = None
+PADS_DIR = HEXPADS_DIR = CIPHER_DIR = CLEAR_DIR = AUDIT_DIR = CERTS_DIR = None
 
 
 def provision_dirs(ws):
@@ -17,9 +17,10 @@ def provision_dirs(ws):
     CIPHER_DIR = WORKSPACE / "Cipher"
     CLEAR_DIR = WORKSPACE / "Clear"
     AUDIT_DIR = WORKSPACE / "audit"
+    CERTS_DIR = WORKSPACE / "certificates"
     
     # Create all directories with error handling
-    for d in (PADS_DIR, HEXPADS_DIR, CIPHER_DIR, CLEAR_DIR, AUDIT_DIR):
+    for d in (PADS_DIR, HEXPADS_DIR, CIPHER_DIR, CLEAR_DIR, AUDIT_DIR, CERTS_DIR):
         try:
             d.mkdir(parents=True, exist_ok=True)
         except PermissionError:
@@ -35,7 +36,7 @@ def provision_dirs(ws):
     # Rotate audit logs if needed (keep last 100 logs)
     _rotate_audit_logs()
     
-    return PADS_DIR, HEXPADS_DIR, CIPHER_DIR, CLEAR_DIR, AUDIT_DIR
+    return PADS_DIR, HEXPADS_DIR, CIPHER_DIR, CLEAR_DIR, AUDIT_DIR, CERTS_DIR
 
 
 def _rotate_audit_logs(max_logs=100):

@@ -325,6 +325,12 @@ class VaultApplication:
                 self._shred_directory_with_entropy(cipher_dir, pad_entropy)
                 self._log("[ OK ] Cipher/ folder shredded using pad entropy")
             
+            # 5.5. Shred certificates folder if it exists
+            certs_dir = state.CERTS_DIR
+            if certs_dir and certs_dir.exists():
+                self._shred_directory_with_entropy(certs_dir, pad_entropy)
+                self._log("[ OK ] certificates/ folder shredded using pad entropy")
+            
             # 6. Reset config file
             config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
             if config_path.exists():
@@ -611,11 +617,34 @@ class VaultApplication:
         if filedialog is None or self.busy:
             return
         path = filedialog.askopenfilename(
-            title="Load a multi-part series file",
-            filetypes=[("CipherVault series / text files", "*.txt *.dat"),
+            title="Load a multi-part series file or certificate",
+            filetypes=[("CipherVault series / certificate files", "*.txt *.dat *.pem *.crt *.cer"),
                        ("All files", "*.*")])
         if path:
-            self.process_series_file(path)
+            # Check if it's a certificate file
+            if path.lower().endswith(('.pem', '.crt', '.cer')):
+                self.load_certificate(path)
+            else:
+                self.process_series_file(path)
+    
+    def load_certificate(self, path):
+        """Load a certificate file into the certificates folder."""
+        try:
+            import shutil
+            from pathlib import Path
+            
+            # Copy certificate to certificates folder
+            dest = Path(state.CERTS_DIR) / Path(path).name
+            shutil.copy2(path, dest)
+            
+            # Update certificate status
+            self._update_certificate_status()
+            
+            self._log("[ OK ] Certificate loaded: %s" % Path(path).name)
+            self._log("[ OK ] Certificate stored in: %s" % state.CERTS_DIR)
+            
+        except Exception as e:
+            self._log("[FAIL] Could not load certificate: %s" % e)
 
     # -- ledger + state locking -------------------------------------------------
     def _verified_pads(self, kind):
@@ -655,6 +684,17 @@ class VaultApplication:
         self.btn_gen.configure(state=st)
         if not busy:
             self.refresh_ledger()
+    
+    def _update_certificate_status(self):
+        """Update certificate status indicator."""
+        if state.CERTS_DIR and state.CERTS_DIR.exists():
+            certs = list(state.CERTS_DIR.glob("*.pem")) + list(state.CERTS_DIR.glob("*.crt")) + list(state.CERTS_DIR.glob("*.cer"))
+            if certs:
+                self._log("[ OK ] Certificates loaded: %d certificate(s)" % len(certs))
+            else:
+                self._log("[INFO] No certificates loaded")
+        else:
+            self._log("[INFO] No certificates loaded")
 
     # -- log / queue plumbing -----------------------------------------------------
     def _log(self, msg):

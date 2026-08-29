@@ -131,6 +131,30 @@ This allows automation of panic triggers based on system events like:
 - Network security policies
 - Custom security scripts
 
+**Certificate Support (Optional):**
+
+CipherVault supports optional certificate-based message authentication for
+agency operations. Certificates can be loaded via the "Load Series File"
+button (now also accepts .pem, .crt, .cer files).
+
+```bash
+# Load a certificate
+# Use the GUI "Load Series File" button and select a .pem, .crt, or .cer file
+```
+
+**Certificate Storage:**
+Certificates are stored in the `certificates/` folder after loading.
+
+**Certificate Verification:**
+- Works with both self-signed and agency CA certificates
+- Certificate status is logged when loaded
+- Messages can be signed and verified using loaded certificates
+
+**Certificate Management:**
+- Certificates are included in the panic routine
+- When panic button is triggered, the `certificates/` folder is shredded
+- Removing a certificate triggers secure shredding of the certificates folder
+
 Example automation script:
 ```bash
 #!/bin/bash

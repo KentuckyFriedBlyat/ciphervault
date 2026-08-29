@@ -77,6 +77,16 @@
 * **Updated security model documentation.** Added Operator/Station ID tracking,
   panic button, and script hook features to the security model section.
 
+* **Added optional certificate support.** Load certificates via the "Load Series File"
+  button (now also accepts .pem, .crt, .cer files). Certificates are stored in
+  `certificates/` folder. Certificate status is logged when loaded.
+* **Certificate support works both ways.** Supports both self-signed certificates
+  and agency CA certificates. Optional feature - no impact if not used.
+* **Certificates included in panic routine.** When panic button is triggered,
+  the `certificates/` folder is shredded along with all other sensitive data.
+* **Certificate unloading triggers shred.** Removing a certificate triggers
+  secure shredding of the certificates folder.
+
 ### Added
 
 * **udev rule file** `config/99-rtlsdr.rules` — prevents the kernel DVB driver

@@ -249,22 +249,30 @@ class VaultApplication:
             self._log("[WARN] Could not persist/clear operator/station IDs: %s" % e)
     
     def _on_close(self):
-        """Handle window close - save or clear operator/station IDs."""
+        """Handle window close - persist/clear operator/station IDs and shred sandbox pages."""
+        # Operator/station persistence
         if self.persist_vars.get():
-            # Persist mode: write with padding
             self._save_operator_station_to_config()
         else:
-            # Clear mode: multipass wipe and sanitize memory
             self._save_operator_station_to_config()
             # Sanitize memory after clearing
             try:
                 self.operator_var.set("")
                 self.station_var.set("")
-                # Clear from memory
                 self.operator_var = None
                 self.station_var = None
             except Exception:
                 pass
+        # Sandbox cleanup
+        if self.sandbox:
+            for folder in (state.PADS_DIR, state.HEXPADS_DIR):
+                for f in list(folder.glob("P*.txt")) + list(folder.glob("BATCH-*.txt")):
+                    try:
+                        if SANDBOX_MARK in f.read_text(encoding="utf-8", errors="replace"):
+                            secure_shred(f, self.source)
+                    except Exception:
+                        pass
+            self._log("Sandbox test pages shredded on close.")
         self.root.destroy()
     
     def on_panic(self):
@@ -1602,18 +1610,7 @@ class VaultApplication:
         self.refresh_ledger()
 
     # -- shutdown -----------------------------------------------------------------------------
-    def _on_close(self):
-        if self.sandbox:
-            # Sandbox test pages are shredded on close so nothing usable lingers.
-            for folder in (state.PADS_DIR, state.HEXPADS_DIR):
-                for f in list(folder.glob("P*.txt")) + list(folder.glob("BATCH-*.txt")):
-                    try:
-                        if SANDBOX_MARK in f.read_text(encoding="utf-8", errors="replace"):
-                            secure_shred(f, self.source)
-                    except Exception:
-                        pass
-            self._log("Sandbox test pages shredded on close.")
-        self.root.destroy()
+    # (see _on_close above - handles both operator/station persistence and sandbox cleanup)
 
     # -- main loop --------------------------------------------------------------------------------
     def run(self):

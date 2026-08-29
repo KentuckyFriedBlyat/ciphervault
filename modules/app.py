@@ -537,8 +537,7 @@ class VaultApplication:
                             variable=self.split_var, command=self._update_counts)
         cb.pack(side="left", padx=(18, 0))
         self.fec_var = tk.BooleanVar(value=False)
-        fcb = tk.Checkbutton(opts, text="FEC (air) - error-protected frame for "
-                                        "JS8Call / VARA transmission",
+        fcb = tk.Checkbutton(opts, text="FEC (air) - error protection",
                              variable=self.fec_var)
         fcb.pack(side="left", padx=(18, 0))
         

@@ -127,24 +127,35 @@ suspect compromise or need to quickly clear sensitive data from the system.
 
 **Script Hook for Panic Trigger:**
 
-External scripts can trigger the panic reset via:
+External scripts and automation can trigger the panic reset from the command line. The trigger mechanism uses a hardcoded sentinel value — `TRIGGER_PANIC` — that the program checks explicitly. Because this value is a static constant known to anyone reading the source, the trigger is **not a secret**: it exists to provide a programmatic panic path, not to authenticate who is triggering it. Anyone with shell access to the machine can invoke it; the security value is that it prevents accidental panic from normal operation and gives operators an automated cleanup path for scripted scenarios.
+
+**Invocation methods:**
 
 ```bash
-# Command-line trigger
+# 1. Direct command-line trigger
 python3 ciphervault.py --panic TRIGGER_PANIC
 
-# Environment variable trigger
+# 2. Environment variable trigger (cleaner for cron/systemd)
 CIPHERVAULT_PANIC=TRIGGER_PANIC python3 ciphervault.py
 
-# Helper script
-CIPHERVAULT_PANIC=TRIGGER_PANIC python3 modules/panic_trigger.py
+# 3. Helper wrapper (equivalent to #2 — sets the env var then launches the program)
+python3 modules/panic_trigger.py
+#   (sets CIPHERVAULT_PANIC=TRIGGER_PANIC internally before exec'ing ciphervault.py)
 ```
 
-This allows automation of panic triggers based on system events like:
-- Failed login attempts
+**Custom trigger hash:** To use a non-default trigger value, set it at runtime with `--panic-hash`:
+
+```bash
+python3 ciphervault.py --panic-hash "my-custom-secret" --panic my-custom-secret
+```
+
+**Use cases (automated panic based on system events):**
+- Failed login attempt thresholds (e.g., 3 consecutive SSH failures)
 - Intrusion detection system alerts
-- Network security policies
-- Custom security scripts
+- Tamper-detect scripts (filesystem integrity checks)
+- Scheduled cleanup on unexpected conditions
+
+**Security note:** The trigger value is checked in plaintext against a hardcoded constant. If an attacker has root or equivalent shell access, they can already destroy the workspace — the panic hook exists for legitimate automated cleanup, not as a defense against a compromised system. Do not rely on it as the sole cleanup mechanism when you suspect physical compromise; in that case, physically destroy the media.
 
 **Certificate Support (Optional):**
 
@@ -261,12 +272,12 @@ audit/         batch records, failed captures, and operational logs
   suspect compromise or need to quickly clear sensitive data from the system.
 
 - **Script hooks for automated panic triggers.** External scripts can
-  trigger the panic reset via:
-  - Command-line: `python3 ciphervault.py --panic TRIGGER_PANIC`
-  - Environment variable: `CIPHERVAULT_PANIC=TRIGGER_PANIC python3 ciphervault.py`
-  - Helper script: `CIPHERVAULT_PANIC=TRIGGER_PANIC python3 modules/panic_trigger.py`
-  This allows automation of panic triggers based on system events like
-  failed login attempts, intrusion detection, or other security policies.
+  trigger the panic reset via command-line (`--panic TRIGGER_PANIC`),
+  environment variable (`CIPHERVAULT_PANIC=TRIGGER_PANIC`), or the
+  `modules/panic_trigger.py` helper. The trigger value is a hardcoded
+  sentinel — it provides an automated cleanup path, not authentication.
+  A custom trigger hash can be set at runtime with `--panic-hash`.
+  See the Running section for full details and a security note.
 
 ---
 

@@ -401,30 +401,42 @@ def setup_udev_rule():
 
 def main():
     """First-run setup: install dependencies, then launch the program."""
-    print("=" * 64)
-    print(" %s v1.3.2-GUI - Core Privacy System (Standalone Workspace)" % APP_NAME)
-    print(" Installing dependencies...")
-    print("=" * 64)
+    
+    # If we've already been re-executed, skip the install phase
+    if os.environ.get(REEXEC_FLAG):
+        print("=" * 64)
+        print(" %s v1.3.2-GUI - Core Privacy System (Standalone Workspace)" % APP_NAME)
+        print(" (re-exec pass - skipping install)")
+        print("=" * 64)
+    else:
+        print("=" * 64)
+        print(" %s v1.3.2-GUI - Core Privacy System (Standalone Workspace)" % APP_NAME)
+        print(" Installing dependencies...")
+        print("=" * 64)
 
-    # 1. Install system dependencies (requires sudo for package install)
-    if not install_system_dependencies():
-        return 1
+        # 1. Install system dependencies (requires sudo for package install)
+        if not install_system_dependencies():
+            return 1
 
-    # 2. Install Python packages (tkinterdnd2 for drag & drop)
-    if not install_python_packages():
-        print("  [WARN] Python packages may need manual installation.")
+        # 2. Install Python packages (tkinterdnd2 for drag & drop)
+        if not install_python_packages():
+            print("  [WARN] Python packages may need manual installation.")
 
-    # 3. Check tkinter
-    if not install_tkinter():
-        return 1
+        # 3. Check tkinter
+        if not install_tkinter():
+            return 1
 
-    # 4. Udev rule setup (non-fatal: tool works without it)
-    setup_udev_rule()
+        # 4. Udev rule setup (non-fatal: tool works without it)
+        setup_udev_rule()
 
-    # 5. All dependencies installed - re-exec for clean pass
-    os.environ[REEXEC_FLAG] = "1"
-    reexec()
-    return 0  # not reached
+        # 5. All dependencies installed - re-exec for clean pass
+        os.environ[REEXEC_FLAG] = "1"
+        reexec()
+        return 0  # not reached
+    
+    # 5. Launch the GUI (either after install or on re-exec pass)
+    from modules.entry import main as real_main
+    return real_main()
 
 
 if __name__ == "__main__":

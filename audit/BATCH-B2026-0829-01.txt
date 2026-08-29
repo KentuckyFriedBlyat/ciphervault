@@ -1,0 +1,13 @@
+Batch ID:        B2026-0829-01
+Date/time:       2026-08-29 local
+Operator:        <fill in by hand>
+Station:         <fill in by hand>
+Frequency:       25.9931 MHz (base band + thermal wobble)
+Gain / rate:     30 dB manual / 1 Msps
+Duration:        ~16s per batch x 1 batches
+Raw bytes:       0 on disk (all captures held in RAM and destroyed)
+Kind:            HEX
+Checks:          raw start PASS | raw end PASS | digests PASS | digits PASS
+Pads fed:        p01-p01 of P2026-08-29-B01 set
+Method:          SDR (atmospheric noise, PRIMARY)
+Disposition:     ACCEPTED - all three mandatory checks passed

@@ -248,6 +248,63 @@ class SdrNoiseSource:
         return os.urandom(n)
 
     # -- calibration: find lower and upper frequency limits ------------------
+    @staticmethod
+    def _write_calibration(lower_mhz, upper_mhz, lower_freq_hz, upper_freq_hz):
+        """Persist calibration results to config/config.py.
+
+        Updates the module-level variables so subsequent runs use the
+        calibrated range instead of falling back to defaults.
+        """
+        import re as _re
+        import os as _os
+
+        # Find config/config.py relative to this file
+        config_path = _os.path.join(
+            _os.path.dirname(_os.path.abspath(__file__)),
+            "..", "config", "config.py"
+        )
+        config_path = _os.path.normpath(config_path)
+
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except (IOError, OSError) as e:
+            return False
+
+        # Replace the calibration values
+        content = _re.sub(
+            r"LOWER_LIMIT_MHZ\s*=\s*None",
+            f"LOWER_LIMIT_MHZ = {lower_mhz}",
+            content
+        )
+        content = _re.sub(
+            r"UPPER_LIMIT_MHZ\s*=\s*None",
+            f"UPPER_LIMIT_MHZ = {upper_mhz}",
+            content
+        )
+        content = _re.sub(
+            r"LOWER_LIMIT_FREQ_HZ\s*=\s*None",
+            f"LOWER_LIMIT_FREQ_HZ = {lower_freq_hz}",
+            content
+        )
+        content = _re.sub(
+            r"UPPER_LIMIT_FREQ_HZ\s*=\s*None",
+            f"UPPER_LIMIT_FREQ_HZ = {upper_freq_hz}",
+            content
+        )
+        content = _re.sub(
+            r"TUNING_COMPLETE\s*=\s*False",
+            "TUNING_COMPLETE = True",
+            content
+        )
+
+        try:
+            with open(config_path, "w", encoding="utf-8") as f:
+                f.write(content)
+            return True
+        except (IOError, OSError):
+            return False
+
     def calibrate(self, log=print):
         """Calibrate the RTL-SDR dongle to find its usable frequency range.
 
@@ -348,6 +405,16 @@ class SdrNoiseSource:
             log("  [WARN] could not find upper receive edge - using default 220 MHz")
             UPPER_LIMIT_MHZ = 220.0
             UPPER_LIMIT_FREQ_HZ = 220_000_000
+
+        # Validate: lower must be less than upper, and both must be positive
+        if LOWER_LIMIT_MHZ < 0 or UPPER_LIMIT_MHZ < 0 or LOWER_LIMIT_MHZ >= UPPER_LIMIT_MHZ:
+            log("  [WARN] calibration produced invalid range (%.1f - %.1f MHz) - keeping previous config"
+                % (LOWER_LIMIT_MHZ, UPPER_LIMIT_MHZ))
+            return False
+
+        # Persist results to config/config.py
+        self._write_calibration(LOWER_LIMIT_MHZ, UPPER_LIMIT_MHZ,
+                                LOWER_LIMIT_FREQ_HZ, UPPER_LIMIT_FREQ_HZ)
 
         TUNING_COMPLETE = True
         log("  [CAL] calibration complete: %.1f - %.1f MHz" % (LOWER_LIMIT_MHZ, UPPER_LIMIT_MHZ))

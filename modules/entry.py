@@ -65,7 +65,6 @@ def main(argv=None):
             verify_path = argv[i + 1]
     if verify_path:
         from modules.crypto import CryptoEngine
-        from pathlib import Path
         p = Path(verify_path)
         if not p.exists():
             print("  [FAIL] Path does not exist: %s" % verify_path)
@@ -123,8 +122,6 @@ def main(argv=None):
         # Command-line trigger
         if panic_hash == "TRIGGER_PANIC":
             print("  [PANIC] Triggered by command-line - initiating panic reset")
-            from modules.app import VaultApplication
-            from modules.noise import SandboxNoiseSource
             app = VaultApplication(source=SandboxNoiseSource())
             app._execute_panic_reset()
             print("  [ OK ] Panic reset complete - program reset to factory defaults")
@@ -132,8 +129,6 @@ def main(argv=None):
     elif panic_env == "TRIGGER_PANIC":
         # Environment variable trigger
         print("  [PANIC] Triggered by environment variable - initiating panic reset")
-        from modules.app import VaultApplication
-        from modules.noise import SandboxNoiseSource
         app = VaultApplication(source=SandboxNoiseSource())
         app._execute_panic_reset()
         print("  [ OK ] Panic reset complete - program reset to factory defaults")

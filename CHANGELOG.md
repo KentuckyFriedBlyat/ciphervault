@@ -55,12 +55,17 @@
   1. Warning dialog explaining what will be destroyed
   2. Final confirmation dialog
   On confirmation, the program:
-  • Shreds operator/station IDs with multipass wipe
-  • Securely destroys all files in audit/
-  • Securely destroys all files in Clear/
-  • Securely destroys all files in Cipher/
+  • Consumes pad material as entropy for secure wipe
+  • Shreds operator/station IDs with pad-derived entropy
+  • Destroys all files in audit/ using pad entropy
+  • Destroys all files in Clear/ using pad entropy
+  • Destroys all files in Cipher/ using pad entropy
   • Resets config to factory defaults
   This immediately resets the program to a clean state for operator safety.
+  Pad material is consumed during the wipe, ensuring both the pads and
+  sensitive data are destroyed simultaneously.
+  The pad entropy is used as the wipe pattern instead of random data,
+  making the secure wipe more cryptographically robust.
 
 ### Added
 

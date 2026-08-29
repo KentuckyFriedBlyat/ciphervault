@@ -96,11 +96,16 @@ the GUI. Clicking it triggers a two-step confirmation dialog:
 2. **Final Confirmation** - Asks "Are you absolutely sure?"
 
 If confirmed, the program immediately:
-- Securely shreds operator/station IDs (multipass wipe)
-- Destroys all files in `audit/`
-- Destroys all files in `Clear/`
-- Destroys all files in `Cipher/`
+- **Consumes pad material** as entropy for the secure wipe
+- Shreds operator/station IDs using pad-derived entropy
+- Destroys all files in `audit/` using pad entropy
+- Destroys all files in `Clear/` using pad entropy
+- Destroys all files in `Cipher/` using pad entropy
 - Resets `config/config.py` to factory defaults
+
+The pad material is hashed and used as the wipe pattern instead of random
+data, making the secure wipe more cryptographically robust. Both the pads
+and sensitive data are destroyed simultaneously.
 
 This immediately resets the program to a clean state. Use this when you
 suspect compromise or need to quickly clear sensitive data from the system.

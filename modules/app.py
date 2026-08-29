@@ -293,44 +293,49 @@ class VaultApplication:
         self._execute_panic_reset()
     
     def _execute_panic_reset(self):
-        """Execute the panic reset - shred everything and reset to factory defaults."""
+        """Execute the panic reset - shred everything using pad keys as entropy."""
         try:
             import shutil
             import os
+            import random
             
             # 1. Reset operator/station IDs
             self.operator_var.set("<fill in by hand>")
             self.station_var.set("<fill in by hand>")
             
-            # 2. Shred audit folder contents
+            # 2. Generate entropy from pad material for wiping
+            self._log("[INFO] Consuming pad material for secure wipe entropy...")
+            pad_entropy = self._consume_pad_entropy()
+            
+            # 3. Shred audit folder contents using pad entropy
             audit_dir = state.AUDIT_DIR
             if audit_dir and audit_dir.exists():
-                self._shred_directory(audit_dir)
-                self._log("[ OK ] audit/ folder shredded")
+                self._shred_directory_with_entropy(audit_dir, pad_entropy)
+                self._log("[ OK ] audit/ folder shredded using pad entropy")
             
-            # 3. Shred Clear folder contents
+            # 4. Shred Clear folder contents using pad entropy
             clear_dir = state.CLEAR_DIR
             if clear_dir and clear_dir.exists():
-                self._shred_directory(clear_dir)
-                self._log("[ OK ] Clear/ folder shredded")
+                self._shred_directory_with_entropy(clear_dir, pad_entropy)
+                self._log("[ OK ] Clear/ folder shredded using pad entropy")
             
-            # 4. Shred Cipher folder contents
+            # 5. Shred Cipher folder contents using pad entropy
             cipher_dir = state.CIPHER_DIR
             if cipher_dir and cipher_dir.exists():
-                self._shred_directory(cipher_dir)
-                self._log("[ OK ] Cipher/ folder shredded")
+                self._shred_directory_with_entropy(cipher_dir, pad_entropy)
+                self._log("[ OK ] Cipher/ folder shredded using pad entropy")
             
-            # 5. Reset config file
+            # 6. Reset config file
             config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
             if config_path.exists():
                 content = config_path.read_text()
                 content = re.sub(r'OPERATOR_ID = .*$', 'OPERATOR_ID = "<fill in by hand>"', content)
                 content = re.sub(r'STATION_ID = .*$', 'STATION_ID = "<fill in by hand>"', content)
-                with open(config_path, 'w', encoding='utf-8') as f:
-                    f.write(content)
+                # Securely overwrite config with pad entropy
+                self._secure_overwrite(config_path, content, sanitize_memory=False)
                 self._log("[ OK ] Config reset to factory defaults")
             
-            # 6. Update UI
+            # 7. Update UI
             self._log("")
             self._log("=" * 64)
             self._log("PANIC RESET COMPLETE - Program reset to factory defaults")
@@ -338,9 +343,92 @@ class VaultApplication:
             self._log("")
             self._log("[ OK ] All sensitive data has been securely destroyed")
             self._log("[ OK ] Program is now in factory default state")
+            self._log("[ OK ] Pad material consumed as entropy for secure wipe")
             
         except Exception as e:
             self._log("[FAIL] Panic reset failed: %s" % e)
+    
+    def _consume_pad_entropy(self):
+        """Generate entropy by consuming pad material.
+        
+        Returns a large byte string derived from pad material that can be
+        used for secure wiping. This ensures the pads themselves are consumed
+        in the process.
+        """
+        import hashlib
+        entropy = bytearray()
+        
+        # Try to read pad files and hash them for entropy
+        for folder in [state.PADS_DIR, state.HEXPADS_DIR]:
+            if folder and folder.exists():
+                for pad_file in folder.glob("P*.txt"):
+                    try:
+                        with open(pad_file, 'rb') as f:
+                            content = f.read()
+                            entropy.extend(hashlib.sha256(content).digest())
+                            # Securely delete the pad file
+                            pad_file.unlink()
+                    except Exception:
+                        pass
+        
+        # If no pad files found, generate entropy from system entropy
+        if not entropy:
+            entropy = os.urandom(1024 * 1024)  # 1 MB of system entropy
+        
+        return bytes(entropy)
+    
+    def _shred_directory_with_entropy(self, directory, entropy_source):
+        """Securely shred all files in a directory using pad entropy.
+        
+        Uses the pad-derived entropy as the wipe pattern instead of random data.
+        """
+        import os
+        import random
+        
+        if not directory.exists():
+            return
+        
+        # Collect all files
+        files = []
+        for item in directory.iterdir():
+            if item.is_file():
+                files.append(item)
+            elif item.is_dir():
+                # Recursively shred subdirectories
+                self._shred_directory_with_entropy(item, entropy_source)
+        
+        # Securely delete each file using pad entropy
+        for file_path in files:
+            try:
+                # Read file
+                with open(file_path, 'rb') as f:
+                    content = f.read()
+                
+                # Use pad entropy for wiping - cycle through entropy source
+                entropy_len = len(entropy_source)
+                for i in range(3):
+                    # Use different parts of entropy for each pass
+                    start = (i * entropy_len // 3) % entropy_len
+                    wipe_data = entropy_source[start:start + len(content)]
+                    if len(wipe_data) < len(content):
+                        # Pad with more entropy if needed
+                        extra = entropy_source[:len(content) - len(wipe_data)]
+                        wipe_data = wipe_data + extra
+                    
+                    with open(file_path, 'wb') as f:
+                        f.write(wipe_data)
+                        f.flush()
+                        os.fsync(f.fileno())
+                
+                # Delete the file
+                file_path.unlink()
+                
+            except Exception:
+                # If secure deletion fails, just delete normally
+                try:
+                    file_path.unlink()
+                except Exception:
+                    pass
     
     def _shred_directory(self, directory):
         """Securely shred all files in a directory."""

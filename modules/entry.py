@@ -31,6 +31,8 @@ def main(argv=None):
     gen_only = None
     operator = None
     station = None
+    panic_trigger = False
+    panic_hash = None
     for i, a in enumerate(argv):
         if a == "--generate" and i + 1 < len(argv) and argv[i + 1].isdigit():
             gen_only = int(argv[i + 1])
@@ -38,6 +40,13 @@ def main(argv=None):
             operator = argv[i + 1]
         elif a == "--station" and i + 1 < len(argv):
             station = argv[i + 1]
+        elif a == "--panic" and i + 1 < len(argv):
+            # --panic HASH - triggers panic if HASH matches configured trigger
+            panic_trigger = True
+            panic_hash = argv[i + 1]
+        elif a == "--panic-hash" and i + 1 < len(argv):
+            # --panic-hash HASH - sets the trigger hash for external scripts
+            panic_hash = argv[i + 1]
 
     if selftest:
         print("SELF CHECK: %s" % ("PASS" if run_selfcheck() else "FAIL"))
@@ -107,6 +116,28 @@ def main(argv=None):
         cfg.OPERATOR_ID = operator
         cfg.STATION_ID = station
         print("  [ OK ] Operator: %s, Station: %s" % (operator, station or "<default>"))
+    
+    # Check for panic trigger (command-line or environment variable)
+    panic_env = os.environ.get("CIPHERVAULT_PANIC", "")
+    if panic_trigger and panic_hash:
+        # Command-line trigger
+        if panic_hash == "TRIGGER_PANIC":
+            print("  [PANIC] Triggered by command-line - initiating panic reset")
+            from modules.app import VaultApplication
+            from modules.noise import SandboxNoiseSource
+            app = VaultApplication(source=SandboxNoiseSource())
+            app._execute_panic_reset()
+            print("  [ OK ] Panic reset complete - program reset to factory defaults")
+            return 0
+    elif panic_env == "TRIGGER_PANIC":
+        # Environment variable trigger
+        print("  [PANIC] Triggered by environment variable - initiating panic reset")
+        from modules.app import VaultApplication
+        from modules.noise import SandboxNoiseSource
+        app = VaultApplication(source=SandboxNoiseSource())
+        app._execute_panic_reset()
+        print("  [ OK ] Panic reset complete - program reset to factory defaults")
+        return 0
     
     ws = os.environ.get("CIPHERVAULT_HOME") or str(Path(__file__).resolve().parent.parent)
     provision_dirs(ws)

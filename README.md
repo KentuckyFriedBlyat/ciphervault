@@ -110,6 +110,47 @@ and sensitive data are destroyed simultaneously.
 This immediately resets the program to a clean state. Use this when you
 suspect compromise or need to quickly clear sensitive data from the system.
 
+**Script Hook for Panic Trigger:**
+
+External scripts can trigger the panic reset via:
+
+```bash
+# Command-line trigger
+python3 ciphervault.py --panic TRIGGER_PANIC
+
+# Environment variable trigger
+CIPHERVAULT_PANIC=TRIGGER_PANIC python3 ciphervault.py
+
+# Helper script
+CIPHERVAULT_PANIC=TRIGGER_PANIC python3 panic_trigger.py
+```
+
+This allows automation of panic triggers based on system events like:
+- Failed login attempts
+- Intrusion detection system alerts
+- Network security policies
+- Custom security scripts
+
+Example automation script:
+```bash
+#!/bin/bash
+# Trigger panic on 3 failed login attempts
+FAILED_ATTEMPTS=0
+while true; do
+    if ! ssh user@host "echo test" 2>/dev/null; then
+        FAILED_ATTEMPTS=$((FAILED_ATTEMPTS + 1))
+        if [ $FAILED_ATTEMPTS -ge 3 ]; then
+            echo "Too many failed attempts - triggering panic"
+            CIPHERVAULT_PANIC=TRIGGER_PANIC python3 /path/to/ciphervault.py
+            exit 1
+        fi
+    else
+        FAILED_ATTEMPTS=0
+    fi
+    sleep 60
+done
+```
+
 Copy `ciphervault.py` **and** the adjacent `modules/` and `config/` folders to
 the machine. The workspace tree is created next to the launcher:
 

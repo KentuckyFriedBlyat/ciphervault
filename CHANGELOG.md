@@ -66,6 +66,13 @@
   sensitive data are destroyed simultaneously.
   The pad entropy is used as the wipe pattern instead of random data,
   making the secure wipe more cryptographically robust.
+* **Added script hook for panic trigger.** External scripts can trigger the
+  panic reset via:
+  - Command-line: `python3 ciphervault.py --panic TRIGGER_PANIC`
+  - Environment variable: `CIPHERVAULT_PANIC=TRIGGER_PANIC python3 ciphervault.py`
+  - Helper script: `CIPHERVAULT_PANIC=TRIGGER_PANIC python3 panic_trigger.py`
+  This allows automation of panic triggers based on system events like
+  failed login attempts, intrusion detection, or other security policies.
 
 ### Added
 

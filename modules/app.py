@@ -573,12 +573,11 @@ class VaultApplication:
                              command=self._update_counts)
         rb2.pack(side="left")
         self.split_var = tk.BooleanVar(value=False)
-        cb = tk.Checkbutton(opts, text="Split long messages across multiple pads "
-                                       "(burns one pad per part)",
+        cb = tk.Checkbutton(opts, text="Multipart MSG",
                             variable=self.split_var, command=self._update_counts)
         cb.pack(side="left", padx=(18, 0))
         self.fec_var = tk.BooleanVar(value=False)
-        fcb = tk.Checkbutton(opts, text="FEC (air) - error protection",
+        fcb = tk.Checkbutton(opts, text="FEC",
                              variable=self.fec_var)
         fcb.pack(side="left", padx=(18, 0))
         

@@ -93,6 +93,45 @@ class VaultApplication:
         except Exception:
             pass
     
+    def _secure_overwrite(self, path, new_content):
+        """Securely overwrite a file to prevent forensic recovery.
+        
+        Overwrites the entire file content with fixed-length strings to prevent
+        old operator/station IDs from being recoverable from the file.
+        """
+        import os
+        try:
+            # Read current content
+            with open(path, 'rb') as f:
+                old_content = f.read()
+            
+            # Convert to string for processing
+            content = old_content.decode('utf-8', errors='replace')
+            
+            # Get the new content as bytes
+            new_bytes = new_content.encode('utf-8', errors='replace')
+            
+            # If new content is shorter, pad it to the original length
+            if len(new_bytes) < len(old_content):
+                # Pad with spaces to prevent old data from being recoverable
+                new_bytes = new_bytes + b' ' * (len(old_content) - len(new_bytes))
+            
+            # If new content is longer, truncate to original length
+            elif len(new_bytes) > len(old_content):
+                new_bytes = new_bytes[:len(old_content)]
+            
+            # Write the fixed-length content
+            with open(path, 'wb') as f:
+                f.write(new_bytes)
+                f.flush()
+                os.fsync(f.fileno())
+                
+        except Exception as e:
+            self._log("[WARN] Secure overwrite failed: %s" % e)
+            # Fall back to regular write if secure overwrite fails
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+    
     def _save_operator_station_to_config(self):
         """Save operator/station IDs to config if the persist checkbox is checked."""
         if not self.persist_vars.get():
@@ -105,16 +144,23 @@ class VaultApplication:
                 cfg.OPERATOR_ID = op
             if st and st != "<fill in by hand>":
                 cfg.STATION_ID = st
-            # Write to config file
+            
+            # Write to config file with secure overwrite
             config_path = Path(__file__).resolve().parent.parent / "config" / "config.py"
             if config_path.exists():
                 content = config_path.read_text()
-                # Replace OPERATOR_ID line
-                content = re.sub(r'OPERATOR_ID = .*$', 'OPERATOR_ID = "%s"' % op, content)
-                # Replace STATION_ID line
-                content = re.sub(r'STATION_ID = .*$', 'STATION_ID = "%s"' % st, content)
-                config_path.write_text(content)
-                self._log("[ OK ] Operator/station IDs persisted to config")
+                
+                # Replace OPERATOR_ID line with fixed-length padding
+                op_line = 'OPERATOR_ID = "%s"' % op
+                content = re.sub(r'OPERATOR_ID = .*$', op_line, content)
+                
+                # Replace STATION_ID line with fixed-length padding
+                st_line = 'STATION_ID = "%s"' % st
+                content = re.sub(r'STATION_ID = .*$', st_line, content)
+                
+                # Securely overwrite the file
+                self._secure_overwrite(config_path, content)
+                self._log("[ OK ] Operator/station IDs persisted to config (secure)")
         except Exception as e:
             self._log("[WARN] Could not persist operator/station IDs: %s" % e)
     

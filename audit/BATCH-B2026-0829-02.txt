@@ -1,0 +1,8 @@
+Batch ID:        B2026-0829-02
+Date/time:       2026-08-29 local
+Operator:        
+Station:         
+Frequency:       26.0000 MHz (base band + thermal wobble)
+Gain / rate:     30 dB manual / 1 Msps
+Method:          SDR (atmospheric noise, PRIMARY)
+Disposition:     DISCARDED - digest stream check failed (bytes=2048 entropy=7.8999 chi-square=270.0) - toolchain fault

@@ -851,11 +851,13 @@ class CryptoEngine:
         batchid = None
         written = []
         total_pads_generated = 0
+        total_pads_failed = 0
         try:
             while total_pads_generated < n_pads:
                 # ---- capture one pad's worth of entropy -------------------
                 bseq += 1
                 batchid = "B%s-%s%s-%02d" % (y, m, d, bseq)
+                pad_ok = False
                 for attempt in range(1, MAX_RETRIES + 1):
                     base_freq = FREQS[(attempt - 1) % len(FREQS)]   # rotate base band each retry
                     freq, sensors = CryptoEngine.apply_frequency_wobble(base_freq, blocks_per_pad)
@@ -873,19 +875,24 @@ class CryptoEngine:
                         log("  [ OK ] front-end: %s" % note)
                         digest_bytes, stats = CryptoEngine._capture_and_verify(
                             freq, blocks, 1, source, log)
+                        pad_ok = True
+                        break
                     except CaptureError as e:
                         CryptoEngine._record_failed_batch(out_dir, batchid, freq / 1000000,
                                                           str(e), source.sandbox)
                         log("  [WARN] batch discarded: %s (any failed check discards the whole batch)" % e)
-                        if attempt >= MAX_RETRIES:
-                            raise RuntimeError(
-                                "three failed batches in a row - stopping.\n\n"
-                                "Troubleshoot: re-run the environment setup, try another USB port "
-                                "or a powered hub, and start at a different time."
-                            ) from e
-                        time.sleep(2)     # re-capture at a different frequency AND time
-                    else:
-                        break
+                        if attempt < MAX_RETRIES:
+                            time.sleep(2)     # re-capture at a different frequency AND time
+                        else:
+                            log("  [FAIL] pad %d failed after %d attempts - skipping" % (p, MAX_RETRIES))
+                            # Mark this pad as failed and continue to next
+                            break
+                
+                # If this pad failed, skip it and try the next one
+                if not pad_ok:
+                    total_pads_failed += 1
+                    log("  [INFO] Skipping pad %d - continuing with next pad" % p)
+                    continue
 
                 # ---- generate and write ONE pad from the verified stream ---
                 stream = _ByteStream(digest_bytes)
@@ -964,6 +971,8 @@ class CryptoEngine:
 
             log("")
             log("  [ OK ] fingerprints stamped on all %d page(s)" % len(written))
+            if total_pads_failed > 0:
+                log("  [WARN] %d pad(s) failed verification and were skipped" % total_pads_failed)
             if source.sandbox:
                 log("  [WARN] sandbox noise source active - these pages are TEST ONLY and "
                     "will be refused for operational use.")

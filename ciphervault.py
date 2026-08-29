@@ -314,9 +314,10 @@ def setup_udev_rule():
     if os.path.exists(rule_path):
         try:
             with open(rule_path, "r") as f:
-                if "CipherVault" in f.read() and "0bda" in f.read():
-                    print("  [ OK ] udev rule installed - DVB driver will not hijack dongle at boot")
-                    return True
+                content = f.read()
+            if "CipherVault" in content and "0bda" in content:
+                print("  [ OK ] udev rule installed - DVB driver will not hijack dongle at boot")
+                return True
         except (IOError, OSError):
             pass
 

@@ -100,6 +100,14 @@
   - Nanosecond timing
   This provides a richer, more dynamic tuning coordinate per batch.
 
+* **Robust pad generation.** Failed entropy capture batches are re-captured up
+  to 3 times at rotated quiet-zone frequencies. If a pad still fails after all
+  retries, it is logged and skipped — generation continues until you receive
+  the exact number of pads requested. After two consecutive failures, a fresh
+  frequency search across all quiet-zone bands is triggered to find a clean
+  coordinate. Failed batches are recorded in `audit/BATCH-*.txt` for operator
+  audit.
+
 ### Added
 
 * **udev rule file** `config/99-rtlsdr.rules` — prevents the kernel DVB driver

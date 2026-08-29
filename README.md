@@ -328,8 +328,16 @@ cover the full usable spectrum of your dongle instead of just the default
 
 1. Generate at a station with a verified dongle (`--selftest`, then watch the
    dongle ping line). Statistical gates (Shannon entropy ≥ 7.9 bits/byte,
-   chi-square on bytes and digits) are applied to every capture batch; failed
-   batches are re-captured up to 3 times at rotated quiet-zone frequencies.
+   chi-square on bytes and digits) are applied to every capture batch.
+
+   **Robust generation:** Each failed batch is re-captured up to 3 times at
+   rotated quiet-zone frequencies. If a pad still fails after all retries,
+   it is logged and skipped — the generation continues until you receive the
+   exact number of pads you requested. After two consecutive failures, the
+   tool triggers a fresh frequency search across all quiet-zone bands to find
+   a clean coordinate before continuing.
+
+   Failed batches are recorded in `audit/BATCH-*.txt` for operator audit.
 
 2. Copy finished pages to the thumbdrive. Each page's fingerprint line is the
    integrity check — the receiving station re-verifies it automatically on
@@ -359,7 +367,7 @@ entirely in memory. Use it after moving the tool to a new machine.
 | `front-end probe ... dead` at batch start | No RF reaching the mixer — check antenna, coax, and the SMA connection on the dongle; sweeping frequencies cannot fix this. |
 | `slowly sweeping upward from 25 MHz...` | Normal recovery: the tuned spot was unusable (dead or overloaded); the tool is hunting for a clean coordinate. |
 | `front end OVERLOADED ... (clipping)` | A strong local signal is saturating the front end — add a 10–20 dB attenuator or lower `GAIN` in `config/config.py`, then re-run. |
-| Capture batch fails mid-run | The tool re-captures up to 3 times at rotated frequencies; persistent failure usually means RF environment or dongle lock — re-run §5 and the startup ping. |
+| Capture batch fails mid-run | The tool re-captures up to 3 times at rotated frequencies; if a pad still fails, it is skipped and generation continues. After two consecutive failures, a fresh frequency search is triggered. Persistent failure usually means RF environment or dongle lock — re-run §5 and the startup ping. |
 | Page refused on use | Fingerprint mismatch → page quarantined. Do not force it; regenerate/re-copy from the source station. |
 | `Halting: environment is not compliant yet` | The install pass ran but a package name differs on your distro — run the printed command manually, then re-run. |
 

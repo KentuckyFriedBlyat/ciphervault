@@ -84,6 +84,11 @@
   and agency CA certificates. Optional feature - no impact if not used.
 * **Certificates included in panic routine.** When panic button is triggered,
   the `certificates/` folder is shredded along with all other sensitive data.
+
+* **Certificate validation at load time.** Prevents loading of non-certificate
+  files (code injection protection). Validates X.509 format, supports PEM/DER,
+  checks certificate structure before accepting. Invalid certificates are rejected
+  with clear error messages and logged to console.
 * **Certificate unloading triggers shred.** Removing a certificate triggers
   secure shredding of the certificates folder.
 

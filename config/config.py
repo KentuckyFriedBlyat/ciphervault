@@ -146,6 +146,10 @@ LOWER_LIMIT_FREQ_HZ = None
 UPPER_LIMIT_FREQ_HZ = None
 TUNING_COMPLETE = False
 
+# Udev rule check state (auto-set on first run)
+UDEV_CHECKED = False
+UDEV_INSTALLED = False
+
 SAMPLE_BYTES = 5898240              # 5.9 MB sanity sample (held in RAM only)
 BLOCK_SIZE = 262144                 # 256 KB digest block
 

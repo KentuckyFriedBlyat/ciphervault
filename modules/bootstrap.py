@@ -5,6 +5,7 @@ import os
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 from config.config import APP_NAME, REQUIRED_BINARIES, RTL_USB_IDS
 
 class EnvironmentBootstrap:
@@ -247,6 +248,121 @@ class EnvironmentBootstrap:
             return "CipherVault" in content and "0bda" in content
         except (IOError, OSError):
             return False
+
+    @classmethod
+    def check_dongle_present(cls, devdir="/dev"):
+        """Check if an RTL-SDR dongle is present on the system bus.
+
+        Looks for USB devices with our known vendor/product IDs.
+        Works whether or not the DVB driver is bound (udev rule may prevent binding).
+        Returns (present, detail) tuple.
+        """
+        # Scan USB bus for matching devices
+        usb_devices = sorted(Path("/sys/bus/usb/devices").glob("[0-9]*-[0-9]*"))
+        
+        for device_path in usb_devices:
+            try:
+                vendor_path = device_path / "idVendor"
+                product_path = device_path / "idProduct"
+                
+                if vendor_path.exists() and product_path.exists():
+                    vendor = vendor_path.read_text().strip()
+                    product = product_path.read_text().strip()
+                    
+                    if vendor == "0bda" and product in ("2837", "2838", "2839"):
+                        return True, "RTL-SDR dongle present"
+            except Exception:
+                continue
+        
+        return False, "No matching RTL-SDR dongle found on USB bus"
+
+    @classmethod
+    def _save_udev_state(cls, installed):
+        """Save udev check state to config/config.py."""
+        import re as _re
+
+        config_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..", "config", "config.py"
+        )
+        config_path = os.path.normpath(config_path)
+
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except (IOError, OSError):
+            return False
+
+        # Add udev state if not present
+        if "UDEV_CHECKED" not in content:
+            content += "\n# Udev rule check state (auto-set on first run)\n"
+            content += "UDEV_CHECKED = False\n"
+            content += "UDEV_INSTALLED = False\n"
+
+        # Update the values
+        content = _re.sub(
+            r"UDEV_CHECKED\s*=\s*False",
+            "UDEV_CHECKED = True",
+            content
+        )
+        content = _re.sub(
+            r"UDEV_INSTALLED\s*=\s*False",
+            "UDEV_INSTALLED = %s" % installed,
+            content
+        )
+
+        try:
+            with open(config_path, "w", encoding="utf-8") as f:
+                f.write(content)
+            return True
+        except (IOError, OSError):
+            return False
+
+    @classmethod
+    def ensure_udev_rule(cls):
+        """Check and install the udev rule if missing.
+
+        Only checks if a dongle is present. If no dongle, skips the check.
+        Saves state to config/config.py to avoid re-checking on subsequent runs.
+        This is non-fatal: if it fails, the tool still works (per-session
+        DVB release via --fix-dvb or manual unbind).
+        """
+        from config.config import UDEV_CHECKED, UDEV_INSTALLED
+
+        # Check if dongle is present
+        dongle_present, _ = cls.check_dongle_present()
+        if not dongle_present:
+            # No dongle - skip udev check (decrypt works without dongle)
+            return True
+
+        # If we've already checked, just return the cached state
+        if UDEV_CHECKED:
+            if UDEV_INSTALLED:
+                print("  [ OK ] udev rule installed - DVB driver will not hijack dongle at boot")
+                return True
+            else:
+                print("  [INFO] udev rule not installed - DVB driver may hijack dongle at boot")
+                print("         Use --fix-dvb at startup or run 'sudo udevadm control --reload-rules' after")
+                print("         manually installing config/%s to /etc/udev/rules.d/" % cls.UDEV_RULE_FILE)
+                return True  # non-fatal: continue
+
+        # First run: check and install if needed
+        if cls.check_udev_rule():
+            cls._save_udev_state(True)
+            print("  [ OK ] udev rule installed - DVB driver will not hijack dongle at boot")
+            return True
+
+        if cls.setup_udev_rule():
+            cls._save_udev_state(True)
+            print("  [ OK ] udev rule installed - DVB driver will not hijack dongle at boot")
+            return True
+
+        # Non-fatal: the tool can still work with per-session unbind
+        cls._save_udev_state(False)
+        print("  [INFO] udev rule not installed - DVB driver may hijack dongle at boot")
+        print("         Use --fix-dvb at startup or run 'sudo udevadm control --reload-rules' after")
+        print("         manually installing config/%s to /etc/udev/rules.d/" % cls.UDEV_RULE_FILE)
+        return True  # non-fatal: continue
 
     @classmethod
     def setup_udev_rule(cls):

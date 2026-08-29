@@ -152,6 +152,8 @@ def main(argv=None):
 
     # 1.5. Udev rule setup (non-fatal: tool works without it, but rule
     # prevents DVB driver hijack at boot on dedicated stations).
+    # Only checks if a dongle is present. Uses cached state from config/config.py
+    # to avoid re-checking on every run.
     EnvironmentBootstrap.ensure_udev_rule()
 
     # 2. Kernel TV (DVB) driver lock gate. Detects by default and prints

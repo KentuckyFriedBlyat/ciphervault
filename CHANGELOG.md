@@ -39,6 +39,13 @@
   (DVB) — AUDIT-05") from README.md. DVB driver override is now handled by
   udev rules on dedicated stations, not by the tool itself.
 
+### Fixed
+
+* **Duplicate `resolve_frequency` method in `modules/noise.py`.** Removed
+  duplicate method definition that was shadowing the primary implementation.
+  Only the first definition was being executed, causing the sweep logic to
+  be ignored.
+
 ---
 
 ## [1.3.2-GUI] — 2026-08-29

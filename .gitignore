@@ -16,6 +16,9 @@ Clear/
 *.pad
 *.cipher
 
+# Runtime / generated
+certificates/
+
 # Config secrets (if any get added later)
 config/secrets.*
 

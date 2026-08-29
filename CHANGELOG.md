@@ -18,6 +18,9 @@
   scans the frequency spectrum to find the lower and upper limits of the
   RTL-SDR dongle. Results are stored in `config/config.py` and used for all
   subsequent sweeps. Only runs once per dongle unless config is reset.
+* **Moved batch records to audit/ folder.** BATCH-*.txt files are now written
+  to `audit/` instead of the pad directories, keeping key material separate
+  from operational logs.
 
 ### Added
 
@@ -31,6 +34,7 @@
 * **Tuning results** in `config/config.py` — `LOWER_LIMIT_MHZ`, `UPPER_LIMIT_MHZ`,
   `LOWER_LIMIT_FREQ_HZ`, `UPPER_LIMIT_FREQ_HZ`, `TUNING_COMPLETE`. Populated
   by the calibration phase.
+* **audit/ folder** for batch records, failed captures, and operational logs.
 
 ### Removed
 

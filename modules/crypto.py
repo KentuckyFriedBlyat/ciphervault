@@ -721,6 +721,7 @@ class CryptoEngine:
     @staticmethod
     def _record_failed_batch(out_dir, batchid, freq_mhz, reason, sandbox):
         """Write a DISCARDED batch record so the sequence stays auditable."""
+        from . import state
         txt = (
             "Batch ID:        %s\n"
             "Date/time:       %s local\n"
@@ -733,7 +734,7 @@ class CryptoEngine:
         )
         if sandbox:
             txt += SANDBOX_MARK + "\n"
-        Path(out_dir, "BATCH-%s.txt" % batchid).write_text(txt, encoding="utf-8")
+        Path(state.AUDIT_DIR, "BATCH-%s.txt" % batchid).write_text(txt, encoding="utf-8")
 
     # -- main generation driver ---------------------------------------------
     @staticmethod
@@ -917,7 +918,7 @@ class CryptoEngine:
                  kind.upper(), n_pads, today, bseq)
             if source.sandbox:
                 rec += SANDBOX_MARK + "\n"
-            Path(out_dir, "BATCH-%s.txt" % batchid).write_text(rec, encoding="utf-8")
+            Path(state.AUDIT_DIR, "BATCH-%s.txt" % batchid).write_text(rec, encoding="utf-8")
 
             log("")
             log("  [ OK ] fingerprints stamped on all %d page(s)" % len(written))

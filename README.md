@@ -88,6 +88,7 @@ Manual Pads/   printable one-time pad pages (fallback mode key material)
 HexPads/       simplified hex-mode pad pages (primary mode key material)
 Cipher/        outbound transmission payloads (single + multi-part series)
 Clear/         decrypted clear-text copies (destroy when done)
+audit/         batch records, failed captures, and operational logs
 ```
 
 ---
